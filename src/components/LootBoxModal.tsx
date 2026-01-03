@@ -23,7 +23,7 @@ export default function LootBoxModal({ isOpen, onClose, onReward }: LootBoxModal
       const shakeDuration = setTimeout(() => {
         setPhase('opening');
 
-        const openDuration = setTimeout(() => {
+        setTimeout(() => {
           const roll = Math.random() * 100;
           let newReward: LootReward;
 
@@ -49,11 +49,11 @@ export default function LootBoxModal({ isOpen, onClose, onReward }: LootBoxModal
 
           onReward(newReward);
         }, 800);
-
-        return () => clearTimeout(openDuration);
       }, 2000);
 
-      return () => clearTimeout(shakeDuration);
+      return () => {
+        clearTimeout(shakeDuration);
+      };
     }
   }, [isOpen, onReward]);
 
