@@ -169,7 +169,8 @@ export const ParticleBackground = ({ variant }: ParticleBackgroundProps) => {
       id={`particles-${variant}`}
       init={particlesInit}
       options={getConfig()}
-      className="absolute inset-0 -z-10"
+      className="absolute inset-0 z-0"
+      style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
     />
   );
 };
