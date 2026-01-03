@@ -1,5 +1,5 @@
 export const AUDIO_DEFAULTS = {
-  KEY: "5hMnGslJBcYtm3okfGhSSzAugD10b61KsMst3FoVa18RJpNCompBJQQJ99CAAC3pKaRXJ3w3AAAYACOGhbdm",
-  REGION: "eastasia",
+  KEY: import.meta.env.VITE_AZURE_KEY || "",
+  REGION: import.meta.env.VITE_AZURE_REGION || "eastasia",
   VOICE: "zh-CN-YunxiNeural",
 };
