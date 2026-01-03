@@ -52,23 +52,31 @@
 
   .voxel-card {
     @apply border-4 rounded-lg;
-    background: rgba(20, 25, 35, 0.4) !important;
+    background-color: rgba(20, 25, 40, 0.3) !important;
+    background-image: none !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
   }
 
   .modal-content {
-    background: rgba(20, 25, 35, 0.4) !important;
+    background-color: rgba(20, 25, 40, 0.3) !important;
+    background-image: none !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
   }
 
   .voxel-card h2, .voxel-card p, .modal-content h2, .modal-content p {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+
+  select, input, .btn-3d {
+    background: rgba(0, 0, 0, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
   }
 
   .glass-green {

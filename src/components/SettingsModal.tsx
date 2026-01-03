@@ -177,7 +177,7 @@ export default function SettingsModal({
                         <select
                           value={azureVoice}
                           onChange={(e) => setAzureVoice(e.target.value)}
-                          className="w-full bg-[#1a1c1e] border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#00b06f]"
+                          className="w-full border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#00b06f]"
                         >
                           <option value="zh-CN-YunxiNeural">Male (Yunxi)</option>
                           <option value="zh-CN-XiaoxiaoNeural">Female (Xiaoxiao)</option>
@@ -213,7 +213,7 @@ export default function SettingsModal({
                     <select
                       value={gradeLevel}
                       onChange={(e) => setGradeLevel(Number(e.target.value))}
-                      className="w-full bg-[#1a1c1e] border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#00b06f]"
+                      className="w-full border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#00b06f]"
                     >
                       <option value={1}>Grade 1 (Basic Nouns)</option>
                       <option value={2}>Grade 2 (Actions & Verbs)</option>
@@ -230,7 +230,7 @@ export default function SettingsModal({
                     <select
                       value={language}
                       onChange={(e) => setLanguage(e.target.value as any)}
-                      className="w-full bg-[#1a1c1e] border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#00b06f]"
+                      className="w-full border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#00b06f]"
                     >
                       <option value="zh-CN">Mandarin (Mainland)</option>
                       <option value="zh-HK">Cantonese (Hong Kong)</option>
