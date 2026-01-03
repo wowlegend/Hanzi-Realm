@@ -52,7 +52,7 @@ export default function LevelClearedModal({
             animate={{ scale: 1, opacity: 1, rotateY: 0 }}
             exit={{ scale: 0.5, opacity: 0, rotateY: 180 }}
             transition={{ type: 'spring', duration: 0.8 }}
-            className="bg-gradient-to-br from-[#2a2d2f] to-[#1a1c1e] rounded-3xl max-w-lg w-full p-8 border-4 border-[#ffd700] shadow-2xl relative overflow-hidden"
+            className="modal-content rounded-3xl max-w-lg w-full p-8 border-4 border-[#ffd700] shadow-2xl relative overflow-hidden"
           >
             <motion.div
               animate={{

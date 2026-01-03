@@ -52,19 +52,23 @@
 
   .voxel-card {
     @apply border-4 rounded-lg;
-    background: rgba(30, 35, 45, 0.3) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
+    background: rgba(20, 25, 35, 0.4) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
   }
 
   .modal-content {
-    background: rgba(30, 35, 45, 0.3) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
+    background: rgba(20, 25, 35, 0.4) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .voxel-card h2, .voxel-card p, .modal-content h2, .modal-content p {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
   }
 
   .glass-green {

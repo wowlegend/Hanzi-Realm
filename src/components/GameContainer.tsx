@@ -560,7 +560,7 @@ export default function GameContainer() {
                     <div className="flex items-center justify-between">
                       <span className="text-3xl sm:text-4xl">{option.char}</span>
                       {hoveredOption === option.char && !gameState.showFeedback && (
-                        <span className="text-sm sm:text-base text-gray-300 bg-[#2a2d2f] px-3 py-1 rounded-lg border-2 border-gray-600">
+                        <span className="text-sm sm:text-base text-gray-300 bg-gray-900/60 px-3 py-1 rounded-lg border-2 border-gray-600">
                           {option.hint}
                         </span>
                       )}

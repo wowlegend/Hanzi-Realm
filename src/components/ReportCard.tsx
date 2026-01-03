@@ -50,7 +50,7 @@ export default function ReportCard({ isOpen, onClose, stats }: ReportCardProps) 
             onClick={(e) => e.stopPropagation()}
             className="bg-gradient-to-br from-[#ffd700] via-[#ffed4e] to-[#ffd700] rounded-3xl p-1 max-w-2xl w-full"
           >
-            <div className="bg-gradient-to-br from-[#2a2d2f] to-[#1a1c1e] rounded-3xl p-8 relative">
+            <div className="modal-content rounded-3xl p-8 relative">
               <button
                 onClick={onClose}
                 className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
@@ -111,7 +111,7 @@ export default function ReportCard({ isOpen, onClose, stats }: ReportCardProps) 
               </motion.button>
 
               {stats.wordsLearned.length > 0 && (
-                <div className="mt-6 p-4 bg-[#1a1c1e] rounded-xl border-2 border-gray-700">
+                <div className="mt-6 p-4 voxel-card rounded-xl border-gray-700">
                   <p className="text-gray-300 text-sm font-bold mb-2">Words You Learned:</p>
                   <div className="flex flex-wrap gap-2">
                     {stats.wordsLearned.map((word, i) => (
