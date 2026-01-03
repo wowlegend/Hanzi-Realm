@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Gift } from 'lucide-react';
+import { X } from 'lucide-react';
+import Spline from '@splinetool/react-spline';
 import confetti from 'canvas-confetti';
 import { Companion } from '../types';
 import { allCompanions, getRarityColor, getRarityChance } from '../data/companions';
@@ -85,13 +86,18 @@ export default function GachaModal({ isOpen, onClose, jade, onRoll }: GachaModal
             </button>
 
             <div className="text-center">
-              <motion.div
-                animate={{ rotate: [0, 10, -10, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="inline-block mb-4"
-              >
-                <Gift className="w-20 h-20 text-[#ffd700]" />
-              </motion.div>
+              <div className="w-full h-64 mb-4 relative">
+                <Suspense fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-white text-xl">Loading 3D...</div>
+                  </div>
+                }>
+                  <Spline
+                    scene="https://prod.spline.design/6Wq1Q7YGyM-iab9i/scene.splinecode"
+                    className="w-full h-full"
+                  />
+                </Suspense>
+              </div>
 
               <h2 className="text-4xl font-black text-white mb-2">
                 MYSTERY BLOCK

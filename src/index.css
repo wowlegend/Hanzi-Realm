@@ -16,6 +16,10 @@
     transform: translateY(0);
     transition: all 0.1s ease;
     box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(20, 20, 20, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.15);
   }
 
   .btn-3d:active {
@@ -25,26 +29,41 @@
   }
 
   .btn-3d-green {
-    @apply btn-3d bg-gradient-to-b from-[#00d184] to-[#00b06f];
+    @apply btn-3d;
+    background: linear-gradient(to bottom, rgba(0, 209, 132, 0.75), rgba(0, 176, 111, 0.75));
     border-bottom-color: #008f5b;
     border-right-color: #00a167;
   }
 
   .btn-3d-gold {
-    @apply btn-3d bg-gradient-to-b from-[#ffd700] to-[#ffb700];
+    @apply btn-3d;
+    background: linear-gradient(to bottom, rgba(255, 215, 0, 0.75), rgba(255, 183, 0, 0.75));
     border-bottom-color: #cc9200;
     border-right-color: #e6a800;
   }
 
   .btn-3d-red {
-    @apply btn-3d bg-gradient-to-b from-[#ff6b6b] to-[#ff3e3e];
+    @apply btn-3d;
+    background: linear-gradient(to bottom, rgba(255, 107, 107, 0.75), rgba(255, 62, 62, 0.75));
     border-bottom-color: #cc3232;
     border-right-color: #e64545;
   }
 
   .voxel-card {
-    @apply border-4 border-black rounded-lg;
-    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.3);
+    @apply border-4 rounded-lg;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(20, 20, 20, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+
+  .modal-content {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(20, 20, 20, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   }
 
   .pixelated {

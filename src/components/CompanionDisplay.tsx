@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useRive } from '@rive-app/react-canvas';
 import { Companion } from '../types';
 import { getRarityColor } from '../data/companions';
 
@@ -8,6 +10,14 @@ interface CompanionDisplayProps {
 }
 
 export default function CompanionDisplay({ companion, isHappy = false }: CompanionDisplayProps) {
+  const [riveError, setRiveError] = useState(false);
+
+  const { RiveComponent } = useRive({
+    src: 'https://cdn.rive.app/animations/vehicles.riv',
+    autoplay: true,
+    onLoadError: () => setRiveError(true),
+  });
+
   if (!companion) return null;
 
   return (
@@ -31,9 +41,15 @@ export default function CompanionDisplay({ companion, isHappy = false }: Compani
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="text-5xl"
+          className="text-5xl w-20 h-20 flex items-center justify-center"
         >
-          {companion.emoji}
+          {riveError ? (
+            companion.emoji
+          ) : (
+            <div className="w-full h-full">
+              <RiveComponent />
+            </div>
+          )}
         </motion.div>
       </div>
       <div className="text-center mt-2">
