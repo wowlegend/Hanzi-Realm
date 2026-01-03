@@ -1,5 +1,4 @@
-import { PlayerInventory, GameSettings, Companion } from '../types';
-import { allCompanions } from '../data/companions';
+import { PlayerInventory, GameSettings, MapNode } from '../types';
 
 interface GameProgress {
   jade: number;
@@ -7,18 +6,23 @@ interface GameProgress {
   bossesDefeated: number;
   totalQuestionsAnswered: number;
   wordsLearned: string[];
+  worldNumber: number;
+  completedNodes: string[];
 }
 
 const PROGRESS_KEY = 'jade_tycoon_progress';
 const INVENTORY_KEY = 'jade_tycoon_inventory';
 const SETTINGS_KEY = 'jade_tycoon_settings';
+const MAP_KEY = 'jade_tycoon_map';
 
 export const saveProgress = (
   jade: number,
   bestStreak: number,
   bossesDefeated: number = 0,
   totalQuestionsAnswered: number = 0,
-  wordsLearned: string[] = []
+  wordsLearned: string[] = [],
+  worldNumber: number = 1,
+  completedNodes: string[] = []
 ): void => {
   const progress: GameProgress = {
     jade,
@@ -26,6 +30,8 @@ export const saveProgress = (
     bossesDefeated,
     totalQuestionsAnswered,
     wordsLearned,
+    worldNumber,
+    completedNodes,
   };
   localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
 };
@@ -41,25 +47,25 @@ export const loadProgress = (): GameProgress => {
         bossesDefeated: parsed.bossesDefeated || 0,
         totalQuestionsAnswered: parsed.totalQuestionsAnswered || 0,
         wordsLearned: parsed.wordsLearned || [],
+        worldNumber: parsed.worldNumber || 1,
+        completedNodes: parsed.completedNodes || [],
       };
     } catch {
-      return {
-        jade: 0,
-        bestStreak: 0,
-        bossesDefeated: 0,
-        totalQuestionsAnswered: 0,
-        wordsLearned: [],
-      };
+      return getDefaultProgress();
     }
   }
-  return {
-    jade: 0,
-    bestStreak: 0,
-    bossesDefeated: 0,
-    totalQuestionsAnswered: 0,
-    wordsLearned: [],
-  };
+  return getDefaultProgress();
 };
+
+const getDefaultProgress = (): GameProgress => ({
+  jade: 0,
+  bestStreak: 0,
+  bossesDefeated: 0,
+  totalQuestionsAnswered: 0,
+  wordsLearned: [],
+  worldNumber: 1,
+  completedNodes: [],
+});
 
 export const saveInventory = (inventory: PlayerInventory): void => {
   localStorage.setItem(INVENTORY_KEY, JSON.stringify(inventory));
@@ -106,27 +112,24 @@ export const loadSettings = (): GameSettings => {
         voiceId: parsed.voiceId || 'WuLq5z7nEcrhppO0ZQJw',
         gradeLevel: parsed.gradeLevel || 1,
         audioSpeed: parsed.audioSpeed || 0.75,
+        bgmVolume: parsed.bgmVolume !== undefined ? parsed.bgmVolume : 0.1,
       };
     } catch {
-      return {
-        elevenLabsApiKey: '',
-        audioLanguage: 'zh-CN',
-        useElevenLabs: true,
-        voiceId: 'WuLq5z7nEcrhppO0ZQJw',
-        gradeLevel: 1,
-        audioSpeed: 0.75,
-      };
+      return getDefaultSettings();
     }
   }
-  return {
-    elevenLabsApiKey: '',
-    audioLanguage: 'zh-CN',
-    useElevenLabs: true,
-    voiceId: 'WuLq5z7nEcrhppO0ZQJw',
-    gradeLevel: 1,
-    audioSpeed: 0.75,
-  };
+  return getDefaultSettings();
 };
+
+const getDefaultSettings = (): GameSettings => ({
+  elevenLabsApiKey: '',
+  audioLanguage: 'zh-CN',
+  useElevenLabs: true,
+  voiceId: 'WuLq5z7nEcrhppO0ZQJw',
+  gradeLevel: 1,
+  audioSpeed: 0.75,
+  bgmVolume: 0.1,
+});
 
 export const addWordLearned = (word: string): void => {
   const progress = loadProgress();
@@ -137,7 +140,25 @@ export const addWordLearned = (word: string): void => {
       progress.bestStreak,
       progress.bossesDefeated,
       progress.totalQuestionsAnswered,
-      progress.wordsLearned
+      progress.wordsLearned,
+      progress.worldNumber,
+      progress.completedNodes
     );
   }
+};
+
+export const saveMapState = (nodes: MapNode[], worldId: number): void => {
+  localStorage.setItem(MAP_KEY, JSON.stringify({ nodes, worldId }));
+};
+
+export const loadMapState = (): { nodes: MapNode[]; worldId: number } | null => {
+  const saved = localStorage.getItem(MAP_KEY);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return null;
+    }
+  }
+  return null;
 };

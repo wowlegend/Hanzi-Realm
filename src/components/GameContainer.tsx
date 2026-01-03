@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { Volume2, Settings as SettingsIcon, Loader, Gift, Trophy } from 'lucide-react';
+import { Volume2, Settings as SettingsIcon, Loader, Gift, Trophy, Map, Zap } from 'lucide-react';
 import { generateLevel } from '../data/questionBank';
-import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats } from '../types';
-import { saveProgress, loadProgress, saveInventory, loadInventory, saveSettings, loadSettings, addWordLearned } from '../utils/storage';
+import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats, MapNode, MusicState, LootReward } from '../types';
+import { saveProgress, loadProgress, saveInventory, loadInventory, saveSettings, loadSettings, addWordLearned, saveMapState, loadMapState } from '../utils/storage';
 import { speakChinese, setDebugCallback } from '../utils/audio';
 import { sfxManager } from '../utils/sfx';
 import { AUDIO_DEFAULTS } from '../utils/constants';
+import { generateWorldNodes } from '../utils/mapGenerator';
+import { getBuffDescription } from '../data/companions';
 import SettingsModal from './SettingsModal';
 import CompanionDisplay from './CompanionDisplay';
 import GachaModal from './GachaModal';
@@ -16,6 +18,10 @@ import ReportCard from './ReportCard';
 import GradeBackground from './GradeBackground';
 import DebugLog from './DebugLog';
 import LevelClearedModal from './LevelClearedModal';
+import WorldMap from './WorldMap';
+import LootBoxModal from './LootBoxModal';
+import NarratorAvatar from './NarratorAvatar';
+import MusicManager from './MusicManager';
 
 export default function GameContainer() {
   const [levels, setLevels] = useState<Level[]>([]);
@@ -33,6 +39,11 @@ export default function GameContainer() {
     gradeLevel: 1,
     worldNumber: 1,
     seenQuestionIds: new Set(),
+    gameMode: 'standard',
+    streakShieldActive: false,
+    streakShieldUsed: false,
+    fireMode: false,
+    currentNodeId: null,
   });
 
   const [settings, setSettings] = useState<GameSettings>({
@@ -41,6 +52,8 @@ export default function GameContainer() {
     useElevenLabs: true,
     voiceId: 'WuLq5z7nEcrhppO0ZQJw',
     gradeLevel: 1,
+    audioSpeed: 0.75,
+    bgmVolume: 0.1,
   });
 
   const [inventory, setInventory] = useState<PlayerInventory>({
@@ -57,6 +70,11 @@ export default function GameContainer() {
     wordsLearned: [],
   });
 
+  const [mapNodes, setMapNodes] = useState<MapNode[]>([]);
+  const [showMap, setShowMap] = useState(true);
+  const [musicState, setMusicState] = useState<MusicState>('map');
+  const [bgmEnabled, setBgmEnabled] = useState(true);
+
   const [shake, setShake] = useState(false);
   const [hoveredOption, setHoveredOption] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -70,9 +88,12 @@ export default function GameContainer() {
   const [bossTimer, setBossTimer] = useState(10);
   const [isLevelClearedOpen, setIsLevelClearedOpen] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [isLootBoxOpen, setIsLootBoxOpen] = useState(false);
+  const [charRevealed, setCharRevealed] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const bossTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSpeakDone = useRef(false);
 
   useEffect(() => {
     setDebugCallback((message: string, isError: boolean) => {
@@ -82,7 +103,6 @@ export default function GameContainer() {
   }, []);
 
   useEffect(() => {
-    // Initialize default Azure TTS settings for zero-config experience
     if (!localStorage.getItem('azure_key')) {
       localStorage.setItem('azure_key', AUDIO_DEFAULTS.KEY);
     }
@@ -96,14 +116,19 @@ export default function GameContainer() {
     const progress = loadProgress();
     const inv = loadInventory();
     const sett = loadSettings();
+    const savedMap = loadMapState();
 
     const apiKey = localStorage.getItem('elevenlabs_key') || sett.elevenLabsApiKey;
-
     const gradeToUse = sett.gradeLevel || 1;
     const seenIds = new Set<number>();
     const levelsForGrade = generateLevel(gradeToUse, 10, seenIds);
 
     setLevels(levelsForGrade);
+
+    const hasShieldCompanion = inv.companions.find(
+      c => c.id === inv.activeCompanion && c.buffType === 'streak_shield'
+    );
+
     setGameState(prev => ({
       ...prev,
       jade: progress.jade,
@@ -113,14 +138,26 @@ export default function GameContainer() {
       gradeLevel: gradeToUse,
       wordsLearned: new Set(progress.wordsLearned),
       seenQuestionIds: seenIds,
+      worldNumber: progress.worldNumber || 1,
+      streakShieldActive: !!hasShieldCompanion,
     }));
+
     setInventory(inv);
     setSettings({
       ...sett,
       elevenLabsApiKey: apiKey,
       gradeLevel: gradeToUse,
-      audioSpeed: sett.audioSpeed || 0.75
+      audioSpeed: sett.audioSpeed || 0.75,
+      bgmVolume: sett.bgmVolume ?? 0.1,
     });
+
+    if (savedMap && savedMap.worldId === (progress.worldNumber || 1)) {
+      setMapNodes(savedMap.nodes);
+    } else {
+      const nodes = generateWorldNodes(progress.worldNumber || 1);
+      setMapNodes(nodes);
+      saveMapState(nodes, progress.worldNumber || 1);
+    }
   }, []);
 
   useEffect(() => {
@@ -130,7 +167,18 @@ export default function GameContainer() {
   }, [levels, gameState.currentLevelIndex]);
 
   useEffect(() => {
+    const newFireMode = gameState.currentStreak >= 5;
+    if (newFireMode !== gameState.fireMode) {
+      setGameState(prev => ({ ...prev, fireMode: newFireMode }));
+      if (newFireMode) {
+        sfxManager.play('combo');
+      }
+    }
+  }, [gameState.currentStreak, gameState.fireMode]);
+
+  useEffect(() => {
     if (isBossMode) {
+      setMusicState('boss');
       bossTimerRef.current = setInterval(() => {
         setBossTimer(prev => {
           if (prev <= 1) {
@@ -155,18 +203,100 @@ export default function GameContainer() {
     };
   }, [isBossMode]);
 
+  useEffect(() => {
+    if (!showMap && !isBossMode) {
+      setMusicState('battle');
+    } else if (showMap) {
+      setMusicState('map');
+    }
+  }, [showMap, isBossMode]);
+
+  useEffect(() => {
+    if (gameState.gameMode === 'listening' && !showMap && !gameState.showFeedback && !autoSpeakDone.current) {
+      autoSpeakDone.current = true;
+      handleSpeak();
+    }
+  }, [gameState.gameMode, showMap, gameState.showFeedback, gameState.currentLevelIndex]);
+
   const currentLevel = levels[gameState.currentLevelIndex] || levels[0];
-  if (!currentLevel) {
+  if (!currentLevel && !showMap) {
     return <div className="min-h-screen flex items-center justify-center text-white">Loading...</div>;
   }
 
-  const fullSentence = currentLevel.sentence_prefix + currentLevel.missing_char + currentLevel.sentence_suffix;
+  const fullSentence = currentLevel ? currentLevel.sentence_prefix + currentLevel.missing_char + currentLevel.sentence_suffix : '';
+
+  const activeCompanion = inventory.companions.find(c => c.id === inventory.activeCompanion) || null;
+
+  const getJadeBonus = (): number => {
+    if (!activeCompanion || activeCompanion.buffType !== 'jade_boost') return 0;
+    return activeCompanion.buffValue;
+  };
+
+  const getComboMultiplier = (): number => {
+    if (!activeCompanion || activeCompanion.buffType !== 'combo_master') return 1;
+    return activeCompanion.buffValue;
+  };
+
+  const handleNodeSelect = (node: MapNode) => {
+    if (node.type === 'treasure') {
+      const jadeReward = node.reward || 300;
+      const newJade = gameState.jade + jadeReward;
+
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#ffd700', '#ffed4e', '#00b06f'],
+      });
+
+      const updatedNodes = mapNodes.map(n => {
+        if (n.id === node.id) return { ...n, status: 'completed' as const };
+        const nodeIndex = mapNodes.findIndex(mn => mn.id === n.id);
+        const completedIndex = mapNodes.findIndex(mn => mn.id === node.id);
+        if (nodeIndex === completedIndex + 1) return { ...n, status: 'unlocked' as const };
+        return n;
+      });
+
+      setMapNodes(updatedNodes);
+      saveMapState(updatedNodes, gameState.worldNumber);
+      setGameState(prev => ({ ...prev, jade: newJade }));
+      saveProgress(newJade, gameState.bestStreak, gameState.bossesDefeated, gameState.questionsAnswered, Array.from(gameState.wordsLearned), gameState.worldNumber);
+      return;
+    }
+
+    const isListeningMode = node.type === 'blind';
+    const isBoss = node.type === 'boss';
+
+    autoSpeakDone.current = false;
+    setCharRevealed(false);
+
+    setGameState(prev => ({
+      ...prev,
+      gameMode: isListeningMode ? 'listening' : 'standard',
+      currentNodeId: node.id,
+      currentLevelIndex: 0,
+      selectedOption: null,
+      isCorrect: null,
+      showFeedback: false,
+    }));
+
+    if (isBoss) {
+      setIsBossMode(true);
+      setBossTimer(10);
+    }
+
+    setShowMap(false);
+  };
 
   const handleOptionClick = async (option: string) => {
     if (gameState.showFeedback) return;
 
     sfxManager.play('click');
     const isCorrect = option === currentLevel.missing_char;
+
+    if (gameState.gameMode === 'listening') {
+      setCharRevealed(true);
+    }
 
     setGameState(prev => ({
       ...prev,
@@ -200,9 +330,14 @@ export default function GameContainer() {
 
       addWordLearned(currentLevel.missing_char);
 
-      const jadeReward = isBossMode ? 500 : 100;
+      const baseReward = isBossMode ? 500 : 100;
+      const bonusPercent = getJadeBonus();
+      const jadeReward = Math.floor(baseReward * (1 + bonusPercent / 100));
 
-      if (gameState.currentStreak + 1 >= 3) {
+      const comboMultiplier = getComboMultiplier();
+      const streakIncrement = Math.ceil(comboMultiplier);
+
+      if (gameState.currentStreak + streakIncrement >= 3) {
         sfxManager.play('combo');
       }
 
@@ -214,7 +349,7 @@ export default function GameContainer() {
       });
 
       const newJade = gameState.jade + jadeReward;
-      const newStreak = gameState.currentStreak + 1;
+      const newStreak = gameState.currentStreak + streakIncrement;
       const newBestStreak = Math.max(newStreak, gameState.bestStreak);
 
       let newBossesDefeated = gameState.bossesDefeated;
@@ -241,16 +376,31 @@ export default function GameContainer() {
         jadeEarned: prev.jadeEarned + jadeReward,
       }));
 
-      saveProgress(newJade, newBestStreak, newBossesDefeated, gameState.questionsAnswered + 1, Array.from(newWords));
+      saveProgress(newJade, newBestStreak, newBossesDefeated, gameState.questionsAnswered + 1, Array.from(newWords), gameState.worldNumber);
+
+      if (isBossMode) {
+        setTimeout(() => {
+          setIsLootBoxOpen(true);
+        }, 1500);
+      }
     } else {
       sfxManager.play('wrong');
       setShake(true);
       setTimeout(() => setShake(false), 500);
 
-      setGameState(prev => ({
-        ...prev,
-        currentStreak: 0,
-      }));
+      const shouldResetStreak = !(gameState.streakShieldActive && !gameState.streakShieldUsed);
+
+      if (shouldResetStreak) {
+        setGameState(prev => ({
+          ...prev,
+          currentStreak: 0,
+        }));
+      } else {
+        setGameState(prev => ({
+          ...prev,
+          streakShieldUsed: true,
+        }));
+      }
     }
 
     if (isBossMode) {
@@ -271,14 +421,34 @@ export default function GameContainer() {
 
   const handleNext = () => {
     const nextIndex = gameState.currentLevelIndex + 1;
-    const shouldTriggerBoss = (gameState.questionsAnswered + 1) % 10 === 0 && gameState.isCorrect;
 
-    if (shouldTriggerBoss && !isBossMode) {
-      setIsBossMode(true);
-      setBossTimer(10);
-    }
+    if (gameState.currentNodeId) {
+      const updatedNodes = mapNodes.map(n => {
+        if (n.id === gameState.currentNodeId) return { ...n, status: 'completed' as const };
+        const nodeIndex = mapNodes.findIndex(mn => mn.id === n.id);
+        const completedIndex = mapNodes.findIndex(mn => mn.id === gameState.currentNodeId);
+        if (nodeIndex === completedIndex + 1) return { ...n, status: 'unlocked' as const };
+        return n;
+      });
 
-    if (nextIndex >= levels.length) {
+      setMapNodes(updatedNodes);
+      saveMapState(updatedNodes, gameState.worldNumber);
+
+      const allCompleted = updatedNodes.every(n => n.status === 'completed');
+      if (allCompleted) {
+        setIsLevelClearedOpen(true);
+      } else {
+        setShowMap(true);
+      }
+
+      setGameState(prev => ({
+        ...prev,
+        selectedOption: null,
+        isCorrect: null,
+        showFeedback: false,
+        currentNodeId: null,
+      }));
+    } else if (nextIndex >= levels.length) {
       setIsLevelClearedOpen(true);
       setGameState(prev => ({
         ...prev,
@@ -287,6 +457,8 @@ export default function GameContainer() {
         showFeedback: false,
       }));
     } else {
+      autoSpeakDone.current = false;
+      setCharRevealed(false);
       setGameState(prev => ({
         ...prev,
         currentLevelIndex: nextIndex,
@@ -306,6 +478,10 @@ export default function GameContainer() {
     const newLevels = generateLevel(settings.gradeLevel, 10, gameState.seenQuestionIds);
     setLevels(newLevels);
 
+    const newNodes = generateWorldNodes(newWorldNumber);
+    setMapNodes(newNodes);
+    saveMapState(newNodes, newWorldNumber);
+
     setGameState(prev => ({
       ...prev,
       currentLevelIndex: 0,
@@ -314,11 +490,13 @@ export default function GameContainer() {
       selectedOption: null,
       isCorrect: null,
       showFeedback: false,
+      currentNodeId: null,
     }));
 
-    saveProgress(newJade, gameState.bestStreak, gameState.bossesDefeated, gameState.questionsAnswered, Array.from(gameState.wordsLearned));
+    saveProgress(newJade, gameState.bestStreak, gameState.bossesDefeated, gameState.questionsAnswered, Array.from(gameState.wordsLearned), newWorldNumber);
 
     setIsLevelClearedOpen(false);
+    setShowMap(true);
   };
 
   const handleSpeak = async () => {
@@ -341,7 +519,11 @@ export default function GameContainer() {
     const oldGrade = settings.gradeLevel;
     const newGrade = newSettings.gradeLevel;
 
-    const updatedSettings = { ...newSettings, audioSpeed: newSettings.audioSpeed || 0.75 };
+    const updatedSettings = {
+      ...newSettings,
+      audioSpeed: newSettings.audioSpeed || 0.75,
+      bgmVolume: newSettings.bgmVolume ?? 0.1,
+    };
     setSettings(updatedSettings);
     saveSettings(updatedSettings);
 
@@ -349,6 +531,11 @@ export default function GameContainer() {
       const seenIds = new Set<number>();
       const newLevels = generateLevel(newGrade, 10, seenIds);
       setLevels(newLevels);
+
+      const newNodes = generateWorldNodes(1);
+      setMapNodes(newNodes);
+      saveMapState(newNodes, 1);
+
       setGameState(prev => ({
         ...prev,
         currentLevelIndex: 0,
@@ -358,7 +545,10 @@ export default function GameContainer() {
         showFeedback: false,
         worldNumber: 1,
         seenQuestionIds: seenIds,
+        currentNodeId: null,
       }));
+
+      setShowMap(true);
     }
   };
 
@@ -383,17 +573,130 @@ export default function GameContainer() {
     saveInventory(newInventory);
 
     const newJade = gameState.jade - 500;
-    setGameState(prev => ({ ...prev, jade: newJade }));
-    saveProgress(newJade, gameState.bestStreak, gameState.bossesDefeated, gameState.questionsAnswered, Array.from(gameState.wordsLearned));
+    setGameState(prev => ({
+      ...prev,
+      jade: newJade,
+      streakShieldActive: companion.buffType === 'streak_shield',
+    }));
+    saveProgress(newJade, gameState.bestStreak, gameState.bossesDefeated, gameState.questionsAnswered, Array.from(gameState.wordsLearned), gameState.worldNumber);
   };
 
-  const activeCompanion = inventory.companions.find(c => c.id === inventory.activeCompanion) || null;
+  const handleLootReward = (reward: LootReward) => {
+    if (reward.type === 'jade' && reward.amount) {
+      const newJade = gameState.jade + reward.amount;
+      setGameState(prev => ({ ...prev, jade: newJade }));
+      saveProgress(newJade, gameState.bestStreak, gameState.bossesDefeated, gameState.questionsAnswered, Array.from(gameState.wordsLearned), gameState.worldNumber);
+    } else if (reward.type === 'companion' && reward.companion) {
+      const updatedCompanions = [...inventory.companions];
+      const existingIndex = updatedCompanions.findIndex(c => c.id === reward.companion!.id);
+
+      if (existingIndex >= 0) {
+        updatedCompanions[existingIndex] = reward.companion;
+      } else {
+        updatedCompanions.push(reward.companion);
+      }
+
+      const newInventory = {
+        ...inventory,
+        companions: updatedCompanions,
+      };
+
+      setInventory(newInventory);
+      saveInventory(newInventory);
+    }
+  };
 
   const progressPercentage = ((gameState.currentLevelIndex + 1) / levels.length) * 100;
+
+  if (showMap) {
+    return (
+      <>
+        <GradeBackground gradeLevel={settings.gradeLevel} />
+        <MusicManager state={musicState} volume={settings.bgmVolume} enabled={bgmEnabled} />
+
+        <WorldMap
+          nodes={mapNodes}
+          worldNumber={gameState.worldNumber}
+          onNodeSelect={handleNodeSelect}
+          jade={gameState.jade}
+        />
+
+        <div className="fixed top-4 right-4 flex gap-2 z-20">
+          <motion.button
+            onClick={() => setBgmEnabled(!bgmEnabled)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`btn-3d p-3 rounded-xl ${bgmEnabled ? 'bg-green-600' : 'bg-gray-600'}`}
+          >
+            <Volume2 className="w-5 h-5 text-white" />
+          </motion.button>
+          <motion.button
+            onClick={() => setIsReportOpen(true)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="btn-3d bg-gradient-to-b from-blue-500 to-blue-600 rounded-xl p-3"
+          >
+            <Trophy className="w-5 h-5 text-white" />
+          </motion.button>
+          <motion.button
+            onClick={() => setIsGachaOpen(true)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="btn-3d-gold rounded-xl p-3"
+          >
+            <Gift className="w-5 h-5 text-white" />
+          </motion.button>
+          <motion.button
+            onClick={() => setIsSettingsOpen(true)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="btn-3d bg-gradient-to-b from-gray-600 to-gray-700 rounded-xl p-3"
+          >
+            <SettingsIcon className="w-5 h-5 text-[#ffd700]" />
+          </motion.button>
+        </div>
+
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          settings={settings}
+          inventory={inventory}
+          hanziCoins={gameState.jade}
+          onSettingsChange={handleSettingsChange}
+          onInventoryChange={(newInv) => {
+            setInventory(newInv);
+            saveInventory(newInv);
+          }}
+        />
+
+        <GachaModal
+          isOpen={isGachaOpen}
+          onClose={() => setIsGachaOpen(false)}
+          jade={gameState.jade}
+          onRoll={handleGachaRoll}
+        />
+
+        <ReportCard
+          isOpen={isReportOpen}
+          onClose={() => setIsReportOpen(false)}
+          stats={sessionStats}
+        />
+
+        <CompanionDisplay companion={activeCompanion} isHappy={companionHappy} />
+
+        <DebugLog
+          message={debugMessage}
+          isError={debugIsError}
+          onClose={() => setDebugMessage('')}
+        />
+      </>
+    );
+  }
 
   return (
     <>
       <GradeBackground gradeLevel={settings.gradeLevel} />
+      <MusicManager state={musicState} volume={settings.bgmVolume} enabled={bgmEnabled} />
 
       <div
         ref={containerRef}
@@ -411,11 +714,22 @@ export default function GameContainer() {
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h1 className="text-3xl sm:text-5xl font-black text-white mb-1 tracking-tight drop-shadow-lg">
-                Hanzi Realm 💎
+                Hanzi Realm
               </h1>
-              <p className="text-white text-xs sm:text-sm drop-shadow">Grade {settings.gradeLevel} - World {gameState.worldNumber}</p>
+              <p className="text-white text-xs sm:text-sm drop-shadow">
+                Grade {settings.gradeLevel} - World {gameState.worldNumber}
+                {gameState.gameMode === 'listening' && ' - Listening Mode'}
+              </p>
             </div>
             <div className="flex gap-2">
+              <motion.button
+                onClick={() => setShowMap(true)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="btn-3d bg-gradient-to-b from-teal-500 to-teal-600 rounded-xl p-3"
+              >
+                <Map className="w-6 h-6 text-white" />
+              </motion.button>
               <motion.button
                 onClick={() => setIsReportOpen(true)}
                 whileHover={{ scale: 1.05 }}
@@ -438,23 +752,26 @@ export default function GameContainer() {
           <div className="flex flex-wrap gap-3 sm:gap-4 mb-6">
             <div className="voxel-card glass-yellow border-yellow-700 px-4 py-2 sm:px-6 sm:py-3">
               <p className="text-white text-sm sm:text-base font-black drop-shadow">
-                💎 {gameState.jade}
+                {gameState.jade} Jade
               </p>
             </div>
-            <div className="voxel-card border-orange-700 px-4 py-2 sm:px-6 sm:py-3 relative">
+            <div className={`voxel-card px-4 py-2 sm:px-6 sm:py-3 relative transition-all duration-300 ${
+              gameState.fireMode ? 'border-orange-500 shadow-[0_0_20px_rgba(255,165,0,0.6)]' : 'border-orange-700'
+            }`}>
               {gameState.currentStreak >= 3 && (
                 <motion.div
                   animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
                   transition={{ duration: 0.5, repeat: Infinity }}
                   className="absolute -top-3 -right-3 text-3xl"
                 >
-                  🔥
+                  {gameState.fireMode ? <Zap className="w-8 h-8 text-yellow-400" /> : '?'}
                 </motion.div>
               )}
               <p className={`text-sm sm:text-base font-black drop-shadow ${
                 gameState.currentStreak > 0 ? 'text-white' : 'text-gray-300'
               }`}>
                 Streak: {gameState.currentStreak}
+                {gameState.fireMode && ' FIRE!'}
               </p>
             </div>
             <div className="voxel-card glass-green border-green-700 px-4 py-2 sm:px-6 sm:py-3">
@@ -462,6 +779,13 @@ export default function GameContainer() {
                 Best: {gameState.bestStreak}
               </p>
             </div>
+            {activeCompanion && (
+              <div className="voxel-card border-purple-700 px-4 py-2 sm:px-6 sm:py-3">
+                <p className="text-white text-xs font-bold drop-shadow">
+                  {activeCompanion.emoji} {getBuffDescription(activeCompanion.buffType, activeCompanion.buffValue)}
+                </p>
+              </div>
+            )}
             <motion.button
               onClick={() => setIsGachaOpen(true)}
               whileHover={{ scale: 1.05, rotate: [0, -5, 5, 0] }}
@@ -476,14 +800,28 @@ export default function GameContainer() {
           <motion.div
             animate={shake ? { rotateZ: [-1, 1, -1, 1, 0] } : {}}
             transition={{ duration: 0.4 }}
-            className={`voxel-card rounded-3xl p-6 sm:p-8 mb-6 ${
-              isBossMode ? 'border-red-500 border-8' : 'border-gray-700'
+            className={`voxel-card rounded-3xl p-6 sm:p-8 mb-6 transition-all duration-300 ${
+              isBossMode ? 'border-red-500 border-8' :
+              gameState.fireMode ? 'border-orange-500 border-4 shadow-[0_0_30px_rgba(255,165,0,0.4)]' :
+              'border-gray-700'
             }`}
           >
             <div className="mb-6">
-              <h2 className="text-[#00b06f] text-xl sm:text-2xl font-black mb-4 drop-shadow">
-                {isBossMode && '👹 BOSS: '}{currentLevel.scenario}
-              </h2>
+              <div className="flex items-start gap-4 mb-4">
+                <NarratorAvatar
+                  seed={currentLevel.scenario}
+                  isSpeaking={isSpeaking}
+                  fireMode={gameState.fireMode}
+                />
+                <div className="flex-1">
+                  <h2 className="text-[#00b06f] text-xl sm:text-2xl font-black drop-shadow">
+                    {isBossMode && 'BOSS: '}{currentLevel.scenario}
+                  </h2>
+                  {gameState.gameMode === 'listening' && (
+                    <p className="text-yellow-400 text-sm mt-1">Listen carefully and choose the right character!</p>
+                  )}
+                </div>
+              </div>
 
               <div className="border-2 border-white/10 rounded-2xl p-4 sm:p-6 relative bg-black/20">
                 <button
@@ -522,7 +860,11 @@ export default function GameContainer() {
                       }
                     `}
                   >
-                    {gameState.showFeedback ? gameState.selectedOption : '___'}
+                    {gameState.showFeedback
+                      ? gameState.selectedOption
+                      : gameState.gameMode === 'listening' && !charRevealed
+                      ? '???'
+                      : '___'}
                   </motion.span>
                   {currentLevel.sentence_suffix}
                 </div>
@@ -589,12 +931,16 @@ export default function GameContainer() {
                   {gameState.isCorrect ? currentLevel.correct_explanation : (
                     <>
                       Wrong! That means "{currentLevel.options.find(o => o.char === gameState.selectedOption)?.explanation}"!
+                      {gameState.streakShieldActive && !gameState.streakShieldUsed && (
+                        <span className="block text-yellow-300 mt-2">Shield protected your streak!</span>
+                      )}
                     </>
                   )}
                 </p>
                 {gameState.isCorrect && (
                   <p className="text-[#ffd700] font-black mt-2 text-2xl">
-                    +{isBossMode ? 500 : 100} 💎
+                    +{Math.floor((isBossMode ? 500 : 100) * (1 + getJadeBonus() / 100))} Jade
+                    {getJadeBonus() > 0 && <span className="text-sm ml-2">(+{getJadeBonus()}% bonus)</span>}
                   </p>
                 )}
               </motion.div>
@@ -609,7 +955,7 @@ export default function GameContainer() {
                 whileTap={{ scale: 0.95 }}
                 className="btn-3d-green w-full text-white font-black py-4 sm:py-5 px-6 rounded-2xl text-lg sm:text-xl shadow-lg"
               >
-                {gameState.currentLevelIndex < levels.length - 1 ? 'Next Challenge ⚔️' : 'New Adventure 🌟'}
+                {gameState.currentNodeId ? 'Back to Map' : gameState.currentLevelIndex < levels.length - 1 ? 'Next Challenge' : 'New Adventure'}
               </motion.button>
             )}
           </motion.div>
@@ -619,7 +965,11 @@ export default function GameContainer() {
               initial={{ width: 0 }}
               animate={{ width: `${progressPercentage}%` }}
               transition={{ duration: 0.5 }}
-              className="bg-gradient-to-r from-[#00b06f] to-[#ffd700] h-full rounded-full"
+              className={`h-full rounded-full ${
+                gameState.fireMode
+                  ? 'bg-gradient-to-r from-orange-500 to-red-500'
+                  : 'bg-gradient-to-r from-[#00b06f] to-[#ffd700]'
+              }`}
             />
           </div>
           <p className="text-center text-white drop-shadow text-sm sm:text-base mt-2 font-bold">
@@ -658,6 +1008,12 @@ export default function GameContainer() {
           worldNumber={gameState.worldNumber}
           jadeBonus={500}
           onContinue={handleLevelClearedContinue}
+        />
+
+        <LootBoxModal
+          isOpen={isLootBoxOpen}
+          onClose={() => setIsLootBoxOpen(false)}
+          onReward={handleLootReward}
         />
 
         <CompanionDisplay companion={activeCompanion} isHappy={companionHappy} />

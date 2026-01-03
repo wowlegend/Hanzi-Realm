@@ -80,6 +80,7 @@ export default function SettingsModal({
       voiceId: '',
       gradeLevel,
       audioSpeed,
+      bgmVolume: settings.bgmVolume ?? 0.1,
     });
 
     setShowToast(true);

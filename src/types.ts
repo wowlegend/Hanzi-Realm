@@ -15,14 +15,32 @@ export interface Level {
 }
 
 export type CompanionRarity = 'common' | 'rare' | 'legendary';
+export type BuffType = 'jade_boost' | 'streak_shield' | 'combo_master';
 
 export interface Companion {
   id: string;
   name: string;
   emoji: string;
+  avatarSeed: string;
   rarity: CompanionRarity;
   unlocked: boolean;
+  buffType: BuffType;
+  buffValue: number;
 }
+
+export type NodeType = 'battle' | 'blind' | 'treasure' | 'boss';
+export type NodeStatus = 'locked' | 'unlocked' | 'completed';
+
+export interface MapNode {
+  id: string;
+  type: NodeType;
+  status: NodeStatus;
+  position: { x: number; y: number };
+  reward?: number;
+}
+
+export type GameMode = 'standard' | 'listening';
+export type MusicState = 'menu' | 'map' | 'battle' | 'boss';
 
 export interface GameState {
   currentLevelIndex: number;
@@ -38,6 +56,16 @@ export interface GameState {
   gradeLevel: number;
   worldNumber: number;
   seenQuestionIds: Set<number>;
+  gameMode: GameMode;
+  streakShieldActive: boolean;
+  streakShieldUsed: boolean;
+  fireMode: boolean;
+  currentNodeId: string | null;
+}
+
+export interface WorldMapState {
+  nodes: MapNode[];
+  currentWorldId: number;
 }
 
 export interface PlayerInventory {
@@ -53,6 +81,7 @@ export interface GameSettings {
   voiceId: string;
   gradeLevel: number;
   audioSpeed: number;
+  bgmVolume: number;
 }
 
 export interface SessionStats {
@@ -61,4 +90,10 @@ export interface SessionStats {
   bossesDefeated: number;
   jadeEarned: number;
   wordsLearned: string[];
+}
+
+export interface LootReward {
+  type: 'jade' | 'companion';
+  amount?: number;
+  companion?: Companion;
 }

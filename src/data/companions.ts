@@ -1,68 +1,95 @@
-import { Companion } from '../types';
+import { Companion, BuffType } from '../types';
 
 export const allCompanions: Companion[] = [
   {
     id: 'panda',
     name: 'Pixel Panda',
-    emoji: '🐼',
+    emoji: '?',
+    avatarSeed: 'panda-companion',
     rarity: 'common',
     unlocked: false,
+    buffType: 'jade_boost',
+    buffValue: 15,
   },
   {
     id: 'tiger',
     name: 'Byte Tiger',
-    emoji: '🐯',
+    emoji: '?',
+    avatarSeed: 'tiger-companion',
     rarity: 'common',
     unlocked: false,
+    buffType: 'jade_boost',
+    buffValue: 15,
   },
   {
     id: 'rabbit',
     name: 'Moon Rabbit',
-    emoji: '🐰',
+    emoji: '?',
+    avatarSeed: 'rabbit-companion',
     rarity: 'common',
     unlocked: false,
+    buffType: 'jade_boost',
+    buffValue: 10,
   },
   {
     id: 'monkey',
     name: 'Code Monkey',
-    emoji: '🐵',
+    emoji: '?',
+    avatarSeed: 'monkey-companion',
     rarity: 'rare',
     unlocked: false,
+    buffType: 'combo_master',
+    buffValue: 1.5,
   },
   {
     id: 'phoenix',
     name: 'Fire Phoenix',
-    emoji: '🔥',
+    emoji: '?',
+    avatarSeed: 'phoenix-companion',
     rarity: 'rare',
     unlocked: false,
+    buffType: 'jade_boost',
+    buffValue: 25,
   },
   {
     id: 'turtle',
     name: 'Wise Turtle',
-    emoji: '🐢',
+    emoji: '?',
+    avatarSeed: 'turtle-companion',
     rarity: 'rare',
     unlocked: false,
+    buffType: 'streak_shield',
+    buffValue: 1,
   },
   {
     id: 'dragon',
     name: 'Azure Dragon',
-    emoji: '🐉',
+    emoji: '?',
+    avatarSeed: 'dragon-companion',
     rarity: 'legendary',
     unlocked: false,
+    buffType: 'combo_master',
+    buffValue: 2,
   },
   {
     id: 'mech',
     name: 'Mech Warrior',
-    emoji: '🤖',
+    emoji: '?',
+    avatarSeed: 'mech-companion',
     rarity: 'legendary',
     unlocked: false,
+    buffType: 'jade_boost',
+    buffValue: 50,
   },
   {
     id: 'unicorn',
     name: 'Cyber Unicorn',
-    emoji: '🦄',
+    emoji: '?',
+    avatarSeed: 'unicorn-companion',
     rarity: 'legendary',
     unlocked: false,
+    buffType: 'streak_shield',
+    buffValue: 2,
   },
 ];
 
@@ -90,4 +117,22 @@ export const getRarityChance = (rarity: string): number => {
     default:
       return 0;
   }
+};
+
+export const getBuffDescription = (buffType: BuffType, buffValue: number): string => {
+  switch (buffType) {
+    case 'jade_boost':
+      return `+${buffValue}% Jade on wins`;
+    case 'streak_shield':
+      return `Streak Shield (${buffValue}x per session)`;
+    case 'combo_master':
+      return `${buffValue}x faster streak multiplier`;
+    default:
+      return '';
+  }
+};
+
+export const getRandomCompanionByRarity = (rarity: 'common' | 'rare' | 'legendary'): Companion => {
+  const filtered = allCompanions.filter(c => c.rarity === rarity);
+  return filtered[Math.floor(Math.random() * filtered.length)];
 };

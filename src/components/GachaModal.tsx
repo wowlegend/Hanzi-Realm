@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import Spline from '@splinetool/react-spline';
 import confetti from 'canvas-confetti';
 import { Companion } from '../types';
-import { allCompanions, getRarityColor, getRarityChance } from '../data/companions';
+import { allCompanions, getRarityColor, getRarityChance, getBuffDescription } from '../data/companions';
 
 interface GachaModalProps {
   isOpen: boolean;
@@ -156,6 +156,9 @@ export default function GachaModal({ isOpen, onClose, jade, onRoll }: GachaModal
                   <h3 className={`text-3xl font-black mb-2 ${getRarityColor(pulledCompanion.rarity).split(' ')[0]}`}>
                     {pulledCompanion.name}
                   </h3>
+                  <p className="text-sm text-green-400 mb-2 font-bold">
+                    {getBuffDescription(pulledCompanion.buffType, pulledCompanion.buffValue)}
+                  </p>
                   <p className="text-xl text-gray-300 uppercase tracking-wide">
                     {pulledCompanion.rarity}
                   </p>
