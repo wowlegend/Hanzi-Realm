@@ -485,7 +485,7 @@ export default function GameContainer() {
                 {isBossMode && '👹 BOSS: '}{currentLevel.scenario}
               </h2>
 
-              <div className="border-2 border-white/10 rounded-2xl p-4 sm:p-6 relative bg-black/10 backdrop-blur-sm">
+              <div className="border-2 border-white/10 rounded-2xl p-4 sm:p-6 relative bg-black/20">
                 <button
                   onClick={handleSpeak}
                   disabled={isSpeaking}
