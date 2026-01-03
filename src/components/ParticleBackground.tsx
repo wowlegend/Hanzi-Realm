@@ -25,12 +25,12 @@ export const ParticleBackground = ({ variant }: ParticleBackgroundProps) => {
           },
           particles: {
             color: {
-              value: ['#ffffff', '#ffeb3b', '#fff9c4'],
+              value: ['#ffffff', '#ffeb3b', '#fff9c4', '#87CEEB'],
             },
             move: {
               enable: true,
               direction: 'right' as const,
-              speed: 1.5,
+              speed: 1,
               random: true,
               straight: false,
               outModes: {
@@ -38,21 +38,21 @@ export const ParticleBackground = ({ variant }: ParticleBackgroundProps) => {
               },
             },
             number: {
-              value: 60,
+              value: 100,
               density: {
                 enable: true,
-                area: 800,
+                area: 600,
               },
             },
             opacity: {
-              value: 0.6,
+              value: 0.8,
               random: true,
             },
             shape: {
               type: 'circle',
             },
             size: {
-              value: { min: 2, max: 6 },
+              value: { min: 4, max: 10 },
               random: true,
             },
           },
@@ -67,12 +67,12 @@ export const ParticleBackground = ({ variant }: ParticleBackgroundProps) => {
           },
           particles: {
             color: {
-              value: ['#ff5722', '#ff9800', '#ffeb3b'],
+              value: ['#ff5722', '#ff9800', '#ffeb3b', '#ff6b35'],
             },
             move: {
               enable: true,
               direction: 'top' as const,
-              speed: 2,
+              speed: 1.5,
               random: true,
               straight: false,
               outModes: {
@@ -80,32 +80,32 @@ export const ParticleBackground = ({ variant }: ParticleBackgroundProps) => {
               },
             },
             number: {
-              value: 80,
+              value: 120,
               density: {
                 enable: true,
-                area: 800,
+                area: 600,
               },
             },
             opacity: {
-              value: 0.7,
+              value: 0.9,
               random: true,
               animation: {
                 enable: true,
-                speed: 1,
-                minimumValue: 0.3,
+                speed: 0.8,
+                minimumValue: 0.5,
               },
             },
             shape: {
               type: 'circle',
             },
             size: {
-              value: { min: 2, max: 5 },
+              value: { min: 4, max: 12 },
               random: true,
             },
             twinkle: {
               particles: {
                 enable: true,
-                frequency: 0.05,
+                frequency: 0.08,
                 opacity: 1,
               },
             },
@@ -121,26 +121,26 @@ export const ParticleBackground = ({ variant }: ParticleBackgroundProps) => {
           },
           particles: {
             color: {
-              value: '#00ff00',
+              value: ['#00ff00', '#00cc00', '#33ff33'],
             },
             move: {
               enable: true,
               direction: 'bottom' as const,
-              speed: 5,
+              speed: 4,
               straight: true,
               outModes: {
                 default: 'out' as const,
               },
             },
             number: {
-              value: 50,
+              value: 80,
               density: {
                 enable: true,
-                area: 800,
+                area: 600,
               },
             },
             opacity: {
-              value: 0.8,
+              value: 0.9,
               random: true,
             },
             shape: {
@@ -151,12 +151,12 @@ export const ParticleBackground = ({ variant }: ParticleBackgroundProps) => {
                   font: 'monospace',
                   fill: true,
                   style: '',
-                  weight: '400',
+                  weight: '700',
                 },
               },
             },
             size: {
-              value: { min: 12, max: 18 },
+              value: { min: 14, max: 22 },
               random: true,
             },
           },
