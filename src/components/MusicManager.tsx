@@ -1,4 +1,5 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Howl } from 'howler';
 import { MusicState } from '../types';
 
 interface MusicManagerProps {
@@ -15,128 +16,90 @@ const TRACKS: Record<MusicState, string> = {
 };
 
 export default function MusicManager({ state, volume, enabled }: MusicManagerProps) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const howlRef = useRef<Howl | null>(null);
   const currentStateRef = useRef<MusicState | null>(null);
-  const fadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [userInteracted, setUserInteracted] = useState(false);
-  const pendingStateRef = useRef<MusicState | null>(null);
 
   useEffect(() => {
     const handleInteraction = () => {
       setUserInteracted(true);
-      document.removeEventListener('click', handleInteraction);
-      document.removeEventListener('keydown', handleInteraction);
-      document.removeEventListener('touchstart', handleInteraction);
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
     };
 
-    document.addEventListener('click', handleInteraction);
-    document.addEventListener('keydown', handleInteraction);
-    document.addEventListener('touchstart', handleInteraction);
+    window.addEventListener('click', handleInteraction);
+    window.addEventListener('keydown', handleInteraction);
+    window.addEventListener('touchstart', handleInteraction);
 
     return () => {
-      document.removeEventListener('click', handleInteraction);
-      document.removeEventListener('keydown', handleInteraction);
-      document.removeEventListener('touchstart', handleInteraction);
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
     };
   }, []);
 
-  const fadeVolume = useCallback((audio: HTMLAudioElement, targetVolume: number, duration: number, onComplete?: () => void) => {
-    if (fadeIntervalRef.current) {
-      clearInterval(fadeIntervalRef.current);
-    }
-
-    const startVolume = audio.volume;
-    const volumeDiff = targetVolume - startVolume;
-    const steps = 20;
-    const stepDuration = duration / steps;
-    let currentStep = 0;
-
-    fadeIntervalRef.current = setInterval(() => {
-      currentStep++;
-      const progress = currentStep / steps;
-      audio.volume = Math.max(0, Math.min(1, startVolume + volumeDiff * progress));
-
-      if (currentStep >= steps) {
-        if (fadeIntervalRef.current) {
-          clearInterval(fadeIntervalRef.current);
-          fadeIntervalRef.current = null;
-        }
-        if (targetVolume === 0) {
-          audio.pause();
-          audio.currentTime = 0;
-        }
-        onComplete?.();
-      }
-    }, stepDuration);
-  }, []);
-
-  const playTrack = useCallback((trackState: MusicState, targetVolume: number) => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-
-    const newAudio = new Audio(TRACKS[trackState]);
-    newAudio.loop = true;
-    newAudio.volume = 0;
-    newAudio.preload = 'auto';
-
-    newAudio.play()
-      .then(() => {
-        fadeVolume(newAudio, Math.min(targetVolume, 0.15), 800);
-        audioRef.current = newAudio;
-        currentStateRef.current = trackState;
-      })
-      .catch((err) => {
-        console.warn('Audio playback failed:', err.message);
-        pendingStateRef.current = trackState;
-      });
-  }, [fadeVolume]);
-
   useEffect(() => {
-    if (!userInteracted) {
-      pendingStateRef.current = state;
-      return;
-    }
-
-    if (pendingStateRef.current && enabled) {
-      playTrack(pendingStateRef.current, volume);
-      pendingStateRef.current = null;
-      return;
-    }
-
-    if (!enabled) {
-      if (audioRef.current) {
-        fadeVolume(audioRef.current, 0, 500);
+    if (!userInteracted || !enabled) {
+      if (howlRef.current) {
+        howlRef.current.fade(howlRef.current.volume(), 0, 500);
+        setTimeout(() => {
+          howlRef.current?.stop();
+        }, 500);
       }
       return;
     }
 
     if (state !== currentStateRef.current) {
-      if (audioRef.current) {
-        fadeVolume(audioRef.current, 0, 300, () => {
-          playTrack(state, volume);
-        });
+      if (howlRef.current) {
+        howlRef.current.fade(howlRef.current.volume(), 0, 300);
+        setTimeout(() => {
+          howlRef.current?.stop();
+          howlRef.current?.unload();
+          createAndPlayTrack();
+        }, 300);
       } else {
-        playTrack(state, volume);
+        createAndPlayTrack();
       }
     }
-  }, [state, enabled, userInteracted, volume, fadeVolume, playTrack]);
+
+    function createAndPlayTrack() {
+      const newHowl = new Howl({
+        src: [TRACKS[state]],
+        html5: true,
+        loop: true,
+        volume: 0,
+        onload: () => {
+          newHowl.play();
+          newHowl.fade(0, Math.min(volume, 0.15), 800);
+        },
+        onloaderror: (id, error) => {
+          console.warn('Music load error:', error);
+        },
+        onplayerror: () => {
+          newHowl.once('unlock', () => {
+            newHowl.play();
+          });
+        },
+      });
+
+      howlRef.current = newHowl;
+      currentStateRef.current = state;
+    }
+  }, [state, enabled, userInteracted, volume]);
 
   useEffect(() => {
-    if (audioRef.current && enabled && userInteracted) {
-      audioRef.current.volume = Math.min(volume, 0.15);
+    if (howlRef.current && enabled && userInteracted) {
+      howlRef.current.volume(Math.min(volume, 0.15));
     }
   }, [volume, enabled, userInteracted]);
 
   useEffect(() => {
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      if (fadeIntervalRef.current) {
-        clearInterval(fadeIntervalRef.current);
+      if (howlRef.current) {
+        howlRef.current.stop();
+        howlRef.current.unload();
+        howlRef.current = null;
       }
     };
   }, []);

@@ -267,6 +267,9 @@ export default function GameContainer() {
     const isListeningMode = node.type === 'blind';
     const isBoss = node.type === 'boss';
 
+    const freshLevels = generateLevel(settings.gradeLevel, isBoss ? 1 : 5, new Set());
+    setLevels(freshLevels);
+
     autoSpeakDone.current = false;
     setCharRevealed(false);
 
