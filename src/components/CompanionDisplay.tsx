@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useRive } from '@rive-app/react-canvas';
 import { Companion } from '../types';
-import { getRarityColor } from '../data/companions';
+import { getRarityColor, getBuffDescription } from '../data/companions';
 
 interface CompanionDisplayProps {
   companion: Companion | null;
@@ -10,15 +9,11 @@ interface CompanionDisplayProps {
 }
 
 export default function CompanionDisplay({ companion, isHappy = false }: CompanionDisplayProps) {
-  const [riveError, setRiveError] = useState(false);
-
-  const { RiveComponent } = useRive({
-    src: 'https://cdn.rive.app/animations/vehicles.riv',
-    autoplay: true,
-    onLoadError: () => setRiveError(true),
-  });
+  const [imageError, setImageError] = useState(false);
 
   if (!companion) return null;
+
+  const avatarUrl = `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(companion.avatarSeed || companion.id)}`;
 
   return (
     <motion.div
@@ -41,20 +36,30 @@ export default function CompanionDisplay({ companion, isHappy = false }: Compani
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="text-5xl w-20 h-20 flex items-center justify-center"
+          className="w-20 h-20 flex items-center justify-center relative"
         >
-          {riveError ? (
-            companion.emoji
+          {imageError ? (
+            <span className="text-5xl">{companion.emoji}</span>
           ) : (
-            <div className="w-full h-full">
-              <RiveComponent />
-            </div>
+            <>
+              <img
+                src={avatarUrl}
+                alt={companion.name}
+                className="w-16 h-16 rounded-lg"
+                style={{ imageRendering: 'pixelated' }}
+                onError={() => setImageError(true)}
+              />
+              <span className="absolute -bottom-1 -right-1 text-2xl drop-shadow-lg">{companion.emoji}</span>
+            </>
           )}
         </motion.div>
       </div>
-      <div className="text-center mt-2">
+      <div className="text-center mt-2 max-w-[100px]">
         <p className={`text-xs font-bold ${getRarityColor(companion.rarity).split(' ')[0]}`}>
           {companion.name}
+        </p>
+        <p className="text-[10px] text-green-400 mt-0.5 leading-tight">
+          {getBuffDescription(companion.buffType, companion.buffValue)}
         </p>
       </div>
     </motion.div>

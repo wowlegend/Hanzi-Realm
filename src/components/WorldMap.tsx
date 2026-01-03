@@ -24,18 +24,21 @@ export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: Wor
 
   return (
     <div className="fixed inset-0 flex flex-col">
-      <div className="p-4 sm:p-6 flex items-center justify-between relative z-10">
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white drop-shadow-lg">
-            The Jade Road
-          </h1>
-          <p className="text-white/80 text-sm sm:text-base">World {worldNumber}</p>
+      <div className="p-4 sm:p-6 flex items-start justify-between relative z-10">
+        <div className="flex flex-col gap-3">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-black text-white drop-shadow-lg">
+              The Jade Road
+            </h1>
+            <p className="text-white/80 text-sm sm:text-base">World {worldNumber}</p>
+          </div>
+          <div className="voxel-card glass-yellow px-4 py-2 sm:px-6 sm:py-3 w-fit">
+            <p className="text-white text-lg font-black drop-shadow">
+              {jade} Jade
+            </p>
+          </div>
         </div>
-        <div className="voxel-card glass-yellow px-4 py-2 sm:px-6 sm:py-3">
-          <p className="text-white text-lg font-black drop-shadow">
-            {jade} Jade
-          </p>
-        </div>
+        <div className="w-32 sm:w-40" />
       </div>
 
       <div className="flex-1 relative overflow-hidden">

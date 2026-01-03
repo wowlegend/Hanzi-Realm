@@ -1,8 +1,14 @@
 import { Level } from '../types';
-import { SEMANTIC_ZONES, getZonesForGrade, SemanticZone, FixedSentence } from './semanticData';
+import { SEMANTIC_ZONES, getZonesForGrade, SemanticZone } from './semanticData';
 
 function getRandomElement<T>(array: T[]): T {
-  return array[Math.floor(Math.random() * array.length)];
+  const index = Math.floor(Math.random() * array.length);
+  return array[index];
+}
+
+function getRandomElements<T>(array: T[], count: number): T[] {
+  const shuffled = fisherYatesShuffle([...array]);
+  return shuffled.slice(0, Math.min(count, array.length));
 }
 
 function selectFocusField(grade: number): 'subject' | 'verb' | 'object' {
@@ -44,19 +50,28 @@ function generateDistractors(
     return ["选项A", "选项B"];
   }
 
-  const shuffled = [...wrongOptions].sort(() => Math.random() - 0.5);
+  const shuffled = fisherYatesShuffle([...wrongOptions]);
   return shuffled.slice(0, 2);
 }
 
 function generateQuestionFromZone(
   zone: SemanticZone,
   grade: number,
-  id: number
+  id: number,
+  usedSentenceIndices: Set<number>
 ): Level {
-  const sentence = getRandomElement(zone.sentences);
+  let sentenceIndex = Math.floor(Math.random() * zone.sentences.length);
+  let attempts = 0;
+
+  while (usedSentenceIndices.has(sentenceIndex) && attempts < zone.sentences.length) {
+    sentenceIndex = (sentenceIndex + 1) % zone.sentences.length;
+    attempts++;
+  }
+
+  usedSentenceIndices.add(sentenceIndex);
+  const sentence = zone.sentences[sentenceIndex];
 
   const focusField = selectFocusField(grade);
-
   const correctAnswer = sentence[focusField];
 
   let sentencePrefix = '';
@@ -79,24 +94,24 @@ function generateQuestionFromZone(
   const distractors = generateDistractors(correctAnswer, focusField, zone);
 
   const allOptions = [correctAnswer, ...distractors];
-  const shuffledOptions = allOptions.sort(() => Math.random() - 0.5);
+  const shuffledOptions = fisherYatesShuffle(allOptions);
 
   const scenarioEmojis: Record<string, string> = {
-    adventure: "⛰️",
-    arts: "🎭",
-    nature: "🌿",
-    daily: "🏠",
-    food: "🍜",
-    school: "🎓",
-    sports: "⚽",
-    weather: "🌤️",
-    travel: "✈️",
-    culture: "🏮",
-    emotions: "😊",
-    technology: "💻"
+    adventure: "Mountain",
+    arts: "Theater",
+    nature: "Leaf",
+    daily: "Home",
+    food: "Bowl",
+    school: "Graduation",
+    sports: "Ball",
+    weather: "Sun",
+    travel: "Plane",
+    culture: "Lantern",
+    emotions: "Heart",
+    technology: "Computer"
   };
 
-  const emoji = scenarioEmojis[zone.id] || "📝";
+  const emoji = scenarioEmojis[zone.id] || "Pencil";
   const scenario = `${emoji} ${zone.category}`;
 
   return {
@@ -133,15 +148,24 @@ export function generateLevel(grade: number, count: number, seenIds: Set<number>
   const zonesToUse = availableZones.length > 0 ? availableZones : SEMANTIC_ZONES;
   const levels: Level[] = [];
 
-  for (let i = 0; i < count; i++) {
-    const zone = getRandomElement(zonesToUse);
+  const shuffledZones = fisherYatesShuffle([...zonesToUse]);
+  const usedSentencesPerZone = new Map<string, Set<number>>();
 
-    const id = Date.now() + Math.random() * 10000;
+  for (let i = 0; i < count; i++) {
+    const zoneIndex = i % shuffledZones.length;
+    const zone = shuffledZones[zoneIndex];
+
+    if (!usedSentencesPerZone.has(zone.id)) {
+      usedSentencesPerZone.set(zone.id, new Set());
+    }
+    const usedSentences = usedSentencesPerZone.get(zone.id)!;
+
+    const id = Date.now() + i * 1000 + Math.floor(Math.random() * 1000);
     const uniqueId = Math.floor(id);
 
-    const level = generateQuestionFromZone(zone, grade, uniqueId);
+    const level = generateQuestionFromZone(zone, grade, uniqueId, usedSentences);
     levels.push(level);
   }
 
-  return levels;
+  return fisherYatesShuffle(levels);
 }

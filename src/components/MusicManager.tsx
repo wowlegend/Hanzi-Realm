@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { MusicState } from '../types';
 
 interface MusicManagerProps {
@@ -16,10 +16,31 @@ const TRACKS: Record<MusicState, string> = {
 
 export default function MusicManager({ state, volume, enabled }: MusicManagerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const currentStateRef = useRef<MusicState>(state);
+  const currentStateRef = useRef<MusicState | null>(null);
   const fadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [userInteracted, setUserInteracted] = useState(false);
+  const pendingStateRef = useRef<MusicState | null>(null);
 
-  const fadeVolume = useCallback((audio: HTMLAudioElement, targetVolume: number, duration: number) => {
+  useEffect(() => {
+    const handleInteraction = () => {
+      setUserInteracted(true);
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('keydown', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
+    };
+
+    document.addEventListener('click', handleInteraction);
+    document.addEventListener('keydown', handleInteraction);
+    document.addEventListener('touchstart', handleInteraction);
+
+    return () => {
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('keydown', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
+    };
+  }, []);
+
+  const fadeVolume = useCallback((audio: HTMLAudioElement, targetVolume: number, duration: number, onComplete?: () => void) => {
     if (fadeIntervalRef.current) {
       clearInterval(fadeIntervalRef.current);
     }
@@ -42,12 +63,48 @@ export default function MusicManager({ state, volume, enabled }: MusicManagerPro
         }
         if (targetVolume === 0) {
           audio.pause();
+          audio.currentTime = 0;
         }
+        onComplete?.();
       }
     }, stepDuration);
   }, []);
 
+  const playTrack = useCallback((trackState: MusicState, targetVolume: number) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    const newAudio = new Audio(TRACKS[trackState]);
+    newAudio.loop = true;
+    newAudio.volume = 0;
+    newAudio.preload = 'auto';
+
+    newAudio.play()
+      .then(() => {
+        fadeVolume(newAudio, Math.min(targetVolume, 0.15), 800);
+        audioRef.current = newAudio;
+        currentStateRef.current = trackState;
+      })
+      .catch((err) => {
+        console.warn('Audio playback failed:', err.message);
+        pendingStateRef.current = trackState;
+      });
+  }, [fadeVolume]);
+
   useEffect(() => {
+    if (!userInteracted) {
+      pendingStateRef.current = state;
+      return;
+    }
+
+    if (pendingStateRef.current && enabled) {
+      playTrack(pendingStateRef.current, volume);
+      pendingStateRef.current = null;
+      return;
+    }
+
     if (!enabled) {
       if (audioRef.current) {
         fadeVolume(audioRef.current, 0, 500);
@@ -55,37 +112,22 @@ export default function MusicManager({ state, volume, enabled }: MusicManagerPro
       return;
     }
 
-    if (state !== currentStateRef.current || !audioRef.current) {
+    if (state !== currentStateRef.current) {
       if (audioRef.current) {
-        fadeVolume(audioRef.current, 0, 300);
+        fadeVolume(audioRef.current, 0, 300, () => {
+          playTrack(state, volume);
+        });
+      } else {
+        playTrack(state, volume);
       }
-
-      setTimeout(() => {
-        const newAudio = new Audio(TRACKS[state]);
-        newAudio.loop = true;
-        newAudio.volume = 0;
-
-        newAudio.play().then(() => {
-          fadeVolume(newAudio, Math.min(volume, 0.1), 500);
-        }).catch(() => {});
-
-        audioRef.current = newAudio;
-        currentStateRef.current = state;
-      }, 350);
     }
-
-    return () => {
-      if (fadeIntervalRef.current) {
-        clearInterval(fadeIntervalRef.current);
-      }
-    };
-  }, [state, enabled, fadeVolume, volume]);
+  }, [state, enabled, userInteracted, volume, fadeVolume, playTrack]);
 
   useEffect(() => {
-    if (audioRef.current && enabled) {
-      audioRef.current.volume = Math.min(volume, 0.1);
+    if (audioRef.current && enabled && userInteracted) {
+      audioRef.current.volume = Math.min(volume, 0.15);
     }
-  }, [volume, enabled]);
+  }, [volume, enabled, userInteracted]);
 
   useEffect(() => {
     return () => {
