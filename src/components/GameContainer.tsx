@@ -436,12 +436,12 @@ export default function GameContainer() {
           </div>
 
           <div className="flex flex-wrap gap-3 sm:gap-4 mb-6">
-            <div className="voxel-card bg-gradient-to-b from-yellow-500 to-yellow-600 border-yellow-700 px-4 py-2 sm:px-6 sm:py-3">
+            <div className="voxel-card glass-yellow border-yellow-700 px-4 py-2 sm:px-6 sm:py-3">
               <p className="text-white text-sm sm:text-base font-black drop-shadow">
                 💎 {gameState.jade}
               </p>
             </div>
-            <div className="voxel-card bg-gradient-to-b from-orange-500 to-orange-600 border-orange-700 px-4 py-2 sm:px-6 sm:py-3 relative">
+            <div className="voxel-card border-orange-700 px-4 py-2 sm:px-6 sm:py-3 relative">
               {gameState.currentStreak >= 3 && (
                 <motion.div
                   animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
@@ -457,7 +457,7 @@ export default function GameContainer() {
                 Streak: {gameState.currentStreak}
               </p>
             </div>
-            <div className="voxel-card bg-gradient-to-b from-green-500 to-green-600 border-green-700 px-4 py-2 sm:px-6 sm:py-3">
+            <div className="voxel-card glass-green border-green-700 px-4 py-2 sm:px-6 sm:py-3">
               <p className="text-white text-sm sm:text-base font-black drop-shadow">
                 Best: {gameState.bestStreak}
               </p>
@@ -476,7 +476,7 @@ export default function GameContainer() {
           <motion.div
             animate={shake ? { rotateZ: [-1, 1, -1, 1, 0] } : {}}
             transition={{ duration: 0.4 }}
-            className={`voxel-card bg-gradient-to-br from-[#2a2d2f] to-[#1a1c1e] rounded-3xl p-6 sm:p-8 mb-6 ${
+            className={`voxel-card rounded-3xl p-6 sm:p-8 mb-6 ${
               isBossMode ? 'border-red-500 border-8' : 'border-gray-700'
             }`}
           >
@@ -485,7 +485,7 @@ export default function GameContainer() {
                 {isBossMode && '👹 BOSS: '}{currentLevel.scenario}
               </h2>
 
-              <div className="voxel-card bg-[#1a1c1e] border-gray-600 rounded-2xl p-4 sm:p-6 relative">
+              <div className="voxel-card border-gray-600 rounded-2xl p-4 sm:p-6 relative">
                 <button
                   onClick={handleSpeak}
                   disabled={isSpeaking}
@@ -549,10 +549,10 @@ export default function GameContainer() {
                     className={`
                       w-full rounded-2xl p-4 sm:p-6 font-bold text-xl sm:text-2xl
                       voxel-card transition-all duration-300
-                      ${showAsCorrect ? 'bg-gradient-to-b from-green-500 to-green-600 border-green-700 text-white' : ''}
+                      ${showAsCorrect ? 'glass-green border-green-700 text-white' : ''}
                       ${showAsWrong ? 'bg-gradient-to-b from-red-500 to-red-600 border-red-700 text-white' : ''}
-                      ${showCorrectHighlight ? 'bg-gradient-to-b from-green-500 to-green-600 border-green-700 text-white opacity-60' : ''}
-                      ${!gameState.showFeedback ? 'bg-gradient-to-b from-gray-700 to-gray-800 border-gray-900 text-white hover:from-[#00b06f] hover:to-[#008f5b]' : ''}
+                      ${showCorrectHighlight ? 'glass-green border-green-700 text-white opacity-60' : ''}
+                      ${!gameState.showFeedback ? 'border-gray-900 text-white' : ''}
                       ${gameState.showFeedback && !isSelected && !showCorrectHighlight ? 'opacity-40' : ''}
                       disabled:cursor-not-allowed
                     `}
@@ -614,7 +614,7 @@ export default function GameContainer() {
             )}
           </motion.div>
 
-          <div className="voxel-card bg-[#1a1c1e] border-gray-700 rounded-full h-4 sm:h-6 overflow-hidden">
+          <div className="voxel-card border-gray-700 rounded-full h-4 sm:h-6 overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progressPercentage}%` }}

@@ -76,7 +76,7 @@ export default function GachaModal({ isOpen, onClose, jade, onRoll }: GachaModal
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-gradient-to-br from-[#2a2d2f] to-[#1a1c1e] rounded-3xl p-8 max-w-2xl w-full border-4 border-[#ffd700] relative"
+            className="modal-content rounded-3xl p-8 max-w-2xl w-full border-4 border-[#ffd700] relative"
           >
             <button
               onClick={onClose}
@@ -107,15 +107,15 @@ export default function GachaModal({ isOpen, onClose, jade, onRoll }: GachaModal
               </p>
 
               <div className="flex justify-center gap-4 mb-8">
-                <div className="voxel-card bg-gradient-to-b from-gray-600 to-gray-700 p-4 text-center">
+                <div className="voxel-card border-gray-600 p-4 text-center">
                   <p className="text-gray-300 text-sm">Common</p>
                   <p className="text-2xl font-bold text-gray-400">60%</p>
                 </div>
-                <div className="voxel-card bg-gradient-to-b from-blue-600 to-blue-700 p-4 text-center">
+                <div className="voxel-card border-blue-600 p-4 text-center">
                   <p className="text-gray-300 text-sm">Rare</p>
                   <p className="text-2xl font-bold text-blue-400">30%</p>
                 </div>
-                <div className="voxel-card bg-gradient-to-b from-yellow-600 to-yellow-700 p-4 text-center">
+                <div className="voxel-card border-yellow-600 p-4 text-center">
                   <p className="text-gray-300 text-sm">Legendary</p>
                   <p className="text-2xl font-bold text-yellow-400">10%</p>
                 </div>
@@ -150,7 +150,7 @@ export default function GachaModal({ isOpen, onClose, jade, onRoll }: GachaModal
                   initial={{ scale: 0, rotateY: 0 }}
                   animate={{ scale: 1, rotateY: 360 }}
                   transition={{ duration: 0.8 }}
-                  className={`voxel-card p-8 ${getRarityColor(pulledCompanion.rarity)} bg-gradient-to-br from-[#2a2d2f] to-[#1a1c1e]`}
+                  className={`voxel-card p-8 ${getRarityColor(pulledCompanion.rarity)}`}
                 >
                   <div className="text-8xl mb-4">{pulledCompanion.emoji}</div>
                   <h3 className={`text-3xl font-black mb-2 ${getRarityColor(pulledCompanion.rarity).split(' ')[0]}`}>

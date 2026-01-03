@@ -137,9 +137,9 @@ export default function SettingsModal({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1c1e] rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl"
+            className="modal-content rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl"
           >
-            <div className="sticky top-0 bg-[#2a2d2f] border-b border-gray-700 p-6 flex items-center justify-between">
+            <div className="sticky top-0 modal-content border-b border-gray-700 p-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Settings className="w-6 h-6 text-[#00b06f]" />
                 <h2 className="text-2xl font-bold text-white">Settings & Shop</h2>
@@ -153,7 +153,7 @@ export default function SettingsModal({
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="bg-[#2a2d2f] rounded-2xl p-4 border border-gray-700">
+              <div className="voxel-card rounded-2xl p-4 border-gray-700">
                 <p className="text-[#ffd700] text-lg font-bold">Balance: {hanziCoins} HC</p>
               </div>
 
@@ -310,7 +310,7 @@ export default function SettingsModal({
                       onClick={() => pet.id !== 'none' && handleBuyPet(pet.id)}
                       disabled={hanziCoins < (petPrices[pet.id] || 0) && pet.id !== 'none'}
                       className={`
-                        p-4 rounded-xl border-2 bg-[#2a2d2f] transition-all
+                        p-4 rounded-xl border-2 voxel-card transition-all
                         ${inventory.pet === pet.id
                           ? 'border-[#ffd700] ring-2 ring-[#ffd700]'
                           : 'border-gray-600'

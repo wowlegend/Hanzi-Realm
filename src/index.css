@@ -52,19 +52,27 @@
 
   .voxel-card {
     @apply border-4 rounded-lg;
-    backdrop-filter: blur(24px) !important;
-    -webkit-backdrop-filter: blur(24px) !important;
-    background: rgba(18, 20, 24, 0.35) !important;
+    background: rgba(30, 35, 45, 0.3) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
   }
 
   .modal-content {
-    backdrop-filter: blur(24px) !important;
-    -webkit-backdrop-filter: blur(24px) !important;
-    background: rgba(18, 20, 24, 0.35) !important;
+    background: rgba(30, 35, 45, 0.3) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .glass-green {
+    background: linear-gradient(to bottom, rgba(0, 176, 111, 0.6), rgba(0, 140, 90, 0.6)) !important;
+  }
+
+  .glass-yellow {
+    background: linear-gradient(to bottom, rgba(230, 168, 0, 0.6), rgba(200, 140, 0, 0.6)) !important;
   }
 
   select, input {
