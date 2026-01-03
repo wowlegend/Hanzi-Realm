@@ -485,7 +485,7 @@ export default function GameContainer() {
                 {isBossMode && '👹 BOSS: '}{currentLevel.scenario}
               </h2>
 
-              <div className="voxel-card border-gray-600 rounded-2xl p-4 sm:p-6 relative">
+              <div className="border-2 border-white/10 rounded-2xl p-4 sm:p-6 relative bg-black/10 backdrop-blur-sm">
                 <button
                   onClick={handleSpeak}
                   disabled={isSpeaking}
@@ -548,12 +548,12 @@ export default function GameContainer() {
                     whileTap={!gameState.showFeedback ? { scale: 0.98 } : {}}
                     className={`
                       w-full rounded-2xl p-4 sm:p-6 font-bold text-xl sm:text-2xl
-                      voxel-card transition-all duration-300
-                      ${showAsCorrect ? 'glass-green border-green-700 text-white' : ''}
-                      ${showAsWrong ? 'bg-gradient-to-b from-red-500 to-red-600 border-red-700 text-white' : ''}
-                      ${showCorrectHighlight ? 'glass-green border-green-700 text-white opacity-60' : ''}
-                      ${!gameState.showFeedback ? 'border-gray-900 text-white' : ''}
-                      ${gameState.showFeedback && !isSelected && !showCorrectHighlight ? 'opacity-40' : ''}
+                      border-2 transition-all duration-300
+                      ${showAsCorrect ? 'bg-green-600/60 border-green-500 text-white' : ''}
+                      ${showAsWrong ? 'bg-red-600/60 border-red-500 text-white' : ''}
+                      ${showCorrectHighlight ? 'bg-green-600/60 border-green-500 text-white opacity-60' : ''}
+                      ${!gameState.showFeedback ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white' : ''}
+                      ${gameState.showFeedback && !isSelected && !showCorrectHighlight ? 'opacity-40 border-white/10 bg-white/5' : ''}
                       disabled:cursor-not-allowed
                     `}
                   >
@@ -579,10 +579,10 @@ export default function GameContainer() {
               <motion.div
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                className={`voxel-card rounded-2xl p-4 sm:p-6 mb-4 ${
+                className={`rounded-2xl p-4 sm:p-6 mb-4 border ${
                   gameState.isCorrect
-                    ? 'bg-gradient-to-b from-green-600 to-green-700 border-green-800'
-                    : 'bg-gradient-to-b from-red-600 to-red-700 border-red-800'
+                    ? 'bg-green-600/60 border-green-500'
+                    : 'bg-red-600/60 border-red-500'
                 }`}
               >
                 <p className="text-lg sm:text-xl font-bold text-white drop-shadow">
@@ -614,7 +614,7 @@ export default function GameContainer() {
             )}
           </motion.div>
 
-          <div className="voxel-card border-gray-700 rounded-full h-4 sm:h-6 overflow-hidden">
+          <div className="border border-white/20 rounded-full h-4 sm:h-6 overflow-hidden bg-black/20">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progressPercentage}%` }}

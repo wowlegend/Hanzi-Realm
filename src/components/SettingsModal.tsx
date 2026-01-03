@@ -153,7 +153,7 @@ export default function SettingsModal({
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="voxel-card rounded-2xl p-4 border-gray-700">
+              <div className="border border-white/10 bg-black/20 rounded-2xl p-4">
                 <p className="text-[#ffd700] text-lg font-bold">Balance: {hanziCoins} HC</p>
               </div>
 
@@ -310,7 +310,7 @@ export default function SettingsModal({
                       onClick={() => pet.id !== 'none' && handleBuyPet(pet.id)}
                       disabled={hanziCoins < (petPrices[pet.id] || 0) && pet.id !== 'none'}
                       className={`
-                        p-4 rounded-xl border-2 voxel-card transition-all
+                        p-4 rounded-xl border-2 transition-all hover:bg-white/5
                         ${inventory.pet === pet.id
                           ? 'border-[#ffd700] ring-2 ring-[#ffd700]'
                           : 'border-gray-600'

@@ -75,28 +75,28 @@ export default function ReportCard({ isOpen, onClose, stats }: ReportCardProps) 
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="voxel-card bg-gradient-to-br from-green-600 to-green-700 p-6 text-center">
-                  <Target className="w-10 h-10 text-white mx-auto mb-2" />
+                <div className="bg-black/30 border border-white/10 rounded-2xl p-6 text-center">
+                  <Target className="w-10 h-10 text-green-400 mx-auto mb-2" />
                   <p className="text-4xl font-black text-white">{accuracy}%</p>
-                  <p className="text-sm text-green-200">Accuracy</p>
+                  <p className="text-sm text-green-300">Accuracy</p>
                 </div>
 
-                <div className="voxel-card bg-gradient-to-br from-blue-600 to-blue-700 p-6 text-center">
-                  <Flame className="w-10 h-10 text-white mx-auto mb-2" />
+                <div className="bg-black/30 border border-white/10 rounded-2xl p-6 text-center">
+                  <Flame className="w-10 h-10 text-blue-400 mx-auto mb-2" />
                   <p className="text-4xl font-black text-white">{stats.wordsLearned.length}</p>
-                  <p className="text-sm text-blue-200">Words Mastered</p>
+                  <p className="text-sm text-blue-300">Words Mastered</p>
                 </div>
 
-                <div className="voxel-card bg-gradient-to-br from-red-600 to-red-700 p-6 text-center">
+                <div className="bg-black/30 border border-white/10 rounded-2xl p-6 text-center">
                   <span className="text-4xl mb-2 block">👹</span>
                   <p className="text-4xl font-black text-white">{stats.bossesDefeated}</p>
-                  <p className="text-sm text-red-200">Bosses Defeated</p>
+                  <p className="text-sm text-red-300">Bosses Defeated</p>
                 </div>
 
-                <div className="voxel-card bg-gradient-to-br from-yellow-600 to-yellow-700 p-6 text-center">
-                  <Gem className="w-10 h-10 text-white mx-auto mb-2" />
+                <div className="bg-black/30 border border-white/10 rounded-2xl p-6 text-center">
+                  <Gem className="w-10 h-10 text-yellow-400 mx-auto mb-2" />
                   <p className="text-4xl font-black text-white">{stats.jadeEarned}</p>
-                  <p className="text-sm text-yellow-200">Jade Earned</p>
+                  <p className="text-sm text-yellow-300">Jade Earned</p>
                 </div>
               </div>
 
@@ -111,7 +111,7 @@ export default function ReportCard({ isOpen, onClose, stats }: ReportCardProps) 
               </motion.button>
 
               {stats.wordsLearned.length > 0 && (
-                <div className="mt-6 p-4 voxel-card rounded-xl border-gray-700">
+                <div className="mt-6 p-4 bg-black/30 border border-white/10 rounded-xl">
                   <p className="text-gray-300 text-sm font-bold mb-2">Words You Learned:</p>
                   <div className="flex flex-wrap gap-2">
                     {stats.wordsLearned.map((word, i) => (
