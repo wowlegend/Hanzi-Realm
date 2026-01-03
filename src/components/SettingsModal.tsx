@@ -25,12 +25,6 @@ export default function SettingsModal({
   onSettingsChange,
   onInventoryChange,
 }: SettingsModalProps) {
-  const [apiKey, setApiKey] = useState(() => {
-    return localStorage.getItem('azure_key') || AUDIO_DEFAULTS.KEY;
-  });
-  const [region, setRegion] = useState(() => {
-    return localStorage.getItem('azure_region') || AUDIO_DEFAULTS.REGION;
-  });
   const [azureVoice, setAzureVoice] = useState(() => {
     return localStorage.getItem('azureVoice') || AUDIO_DEFAULTS.VOICE;
   });
@@ -40,18 +34,6 @@ export default function SettingsModal({
   const [audioSpeed, setAudioSpeed] = useState(settings.audioSpeed || 0.75);
   const [showToast, setShowToast] = useState(false);
   const [isTestingAudio, setIsTestingAudio] = useState(false);
-
-  useEffect(() => {
-    if (apiKey) {
-      localStorage.setItem('azure_key', apiKey);
-    }
-  }, [apiKey]);
-
-  useEffect(() => {
-    if (region) {
-      localStorage.setItem('azure_region', region);
-    }
-  }, [region]);
 
   useEffect(() => {
     if (azureVoice) {
@@ -92,10 +74,10 @@ export default function SettingsModal({
 
   const handleSaveSettings = () => {
     onSettingsChange({
-      elevenLabsApiKey: apiKey,
+      elevenLabsApiKey: '',
       audioLanguage: language as 'zh-CN' | 'zh-HK',
       useElevenLabs: useAzure,
-      voiceId: region,
+      voiceId: '',
       gradeLevel,
       audioSpeed,
     });
@@ -112,13 +94,13 @@ export default function SettingsModal({
   };
 
   const handleTestAudio = async () => {
-    if (!apiKey) {
-      alert('Please enter Azure API Key in Settings');
+    if (!AUDIO_DEFAULTS.KEY) {
+      alert('Azure API Key not configured');
       return;
     }
     setIsTestingAudio(true);
     try {
-      await speakChinese('你好', apiKey, region, useAzure, language, audioSpeed);
+      await speakChinese('你好', AUDIO_DEFAULTS.KEY, AUDIO_DEFAULTS.REGION, useAzure, language, audioSpeed);
     } catch (error) {
       console.error('Test audio error:', error);
     } finally {
@@ -191,28 +173,6 @@ export default function SettingsModal({
                   {useAzure && (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-gray-300 text-sm mb-2">Azure API Key</label>
-                        <input
-                          type="password"
-                          value={apiKey}
-                          onChange={(e) => setApiKey(e.target.value)}
-                          placeholder="Enter your Azure Speech API key"
-                          className="w-full bg-[#1a1c1e] border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-[#00b06f]"
-                        />
-                        <p className="text-gray-500 text-xs mt-2">Get your key from Azure Portal Speech Services</p>
-                      </div>
-                      <div>
-                        <label className="block text-gray-300 text-sm mb-2">Azure Region</label>
-                        <input
-                          type="text"
-                          value={region}
-                          onChange={(e) => setRegion(e.target.value)}
-                          placeholder="eastasia"
-                          className="w-full bg-[#1a1c1e] border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-[#00b06f]"
-                        />
-                        <p className="text-gray-500 text-xs mt-2">Common regions: eastasia, southeastasia, eastus, westus</p>
-                      </div>
-                      <div>
                         <label className="block text-gray-300 text-sm mb-2">Voice Gender</label>
                         <select
                           value={azureVoice}
@@ -227,7 +187,7 @@ export default function SettingsModal({
                       <div>
                         <button
                           onClick={handleTestAudio}
-                          disabled={isTestingAudio || !apiKey}
+                          disabled={isTestingAudio || !AUDIO_DEFAULTS.KEY}
                           className="w-full bg-[#00b06f] hover:bg-[#00d184] disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
                         >
                           <Volume2 className="w-5 h-5" />
