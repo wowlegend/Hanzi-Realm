@@ -16,6 +16,11 @@ export default function LootBoxModal({ isOpen, onClose, onReward }: LootBoxModal
   const [reward, setReward] = useState<LootReward | null>(null);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
   const hasTriggeredReward = useRef(false);
+  const onRewardRef = useRef(onReward);
+
+  useEffect(() => {
+    onRewardRef.current = onReward;
+  }, [onReward]);
 
   const clearAllTimeouts = useCallback(() => {
     timeoutRefs.current.forEach(t => clearTimeout(t));
@@ -73,7 +78,7 @@ export default function LootBoxModal({ isOpen, onClose, onReward }: LootBoxModal
             : ['#ffd700', '#00b06f', '#ffffff'],
         });
 
-        onReward(newReward);
+        onRewardRef.current(newReward);
       }, 800);
 
       timeoutRefs.current.push(openTimeout);
@@ -84,7 +89,7 @@ export default function LootBoxModal({ isOpen, onClose, onReward }: LootBoxModal
     return () => {
       clearAllTimeouts();
     };
-  }, [isOpen, onReward, clearAllTimeouts]);
+  }, [isOpen, clearAllTimeouts]);
 
   if (!isOpen) return null;
 

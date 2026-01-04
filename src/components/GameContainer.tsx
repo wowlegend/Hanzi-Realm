@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { Volume2, Settings as SettingsIcon, Loader, Gift, Trophy, Map, Zap, Lightbulb } from 'lucide-react';
@@ -721,7 +721,7 @@ export default function GameContainer() {
     syncProgress(newJade, gameState.currentStreak, gameState.bestStreak, gameState.questionsAnswered, gameState.bossesDefeated, gameState.worldNumber, settings.gradeLevel, Array.from(gameState.wordsLearned));
   };
 
-  const handleLootReward = (reward: LootReward) => {
+  const handleLootReward = useCallback((reward: LootReward) => {
     if (reward.type === 'jade' && reward.amount) {
       const newJade = gameState.jade + reward.amount;
       setGameState(prev => ({ ...prev, jade: newJade }));
@@ -744,9 +744,9 @@ export default function GameContainer() {
       setInventory(newInventory);
       saveInventory(newInventory);
     }
-  };
+  }, [gameState.jade, gameState.currentStreak, gameState.bestStreak, gameState.questionsAnswered, gameState.bossesDefeated, gameState.worldNumber, gameState.wordsLearned, settings.gradeLevel, inventory.companions]);
 
-  const handleLootBoxClose = () => {
+  const handleLootBoxClose = useCallback(() => {
     setIsLootBoxOpen(false);
 
     if (gameState.currentNodeId) {
@@ -787,7 +787,7 @@ export default function GameContainer() {
         showFeedback: false,
       }));
     }
-  };
+  }, [gameState.currentNodeId, mapNodes, gameState.worldNumber, user]);
 
   const progressPercentage = ((gameState.currentLevelIndex + 1) / levels.length) * 100;
 
