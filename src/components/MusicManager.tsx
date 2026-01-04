@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Howl } from 'howler';
+import { Howl, Howler } from 'howler';
 import { MusicState } from '../types';
 
 interface MusicManagerProps {
@@ -17,42 +17,59 @@ const TRACKS: Record<MusicState, string> = {
 
 export default function MusicManager({ state, volume, enabled }: MusicManagerProps) {
   const howlRef = useRef<Howl | null>(null);
-  const currentUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const url = TRACKS[state];
-
-    if (currentUrlRef.current === url && howlRef.current) {
-      if (!howlRef.current.playing() && enabled) {
-        howlRef.current.play();
+    const unlockAudio = () => {
+      if (Howler.ctx && Howler.ctx.state === 'suspended') {
+        Howler.ctx.resume().then(() => {
+          console.log('AudioContext Resumed by User Interaction');
+        });
       }
-      return;
-    }
+    };
 
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
+    document.addEventListener('keydown', unlockAudio);
+
+    return () => {
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
+    };
+  }, []);
+
+  useEffect(() => {
     if (howlRef.current) {
       howlRef.current.stop();
       howlRef.current.unload();
     }
 
-    if (!enabled) return;
+    if (!enabled) {
+      console.log('Music Disabled');
+      return;
+    }
+
+    console.log(`Attempting to play: ${state}`);
+    const url = TRACKS[state];
 
     const sound = new Howl({
       src: [url],
       html5: true,
       loop: true,
-      volume: volume,
+      volume: Math.max(volume, 0.5),
       autoplay: true,
-      onloaderror: (id, err) => console.warn('BGM Load Error:', err),
+      onload: () => console.log(`Loaded BGM: ${state}`),
+      onloaderror: (id, err) => console.error(`Load Error for ${state}:`, err),
       onplayerror: (id, err) => {
-        console.warn('BGM Play Error (Autoplay blocked):', err);
+        console.error(`Autoplay Blocked for ${state}:`, err);
         sound.once('unlock', () => {
+          console.log('Unlocked and Playing');
           sound.play();
         });
       },
     });
 
     howlRef.current = sound;
-    currentUrlRef.current = url;
 
     return () => {
       sound.stop();
@@ -65,18 +82,6 @@ export default function MusicManager({ state, volume, enabled }: MusicManagerPro
       howlRef.current.volume(volume);
     }
   }, [volume]);
-
-  useEffect(() => {
-    if (howlRef.current) {
-      if (enabled) {
-        if (!howlRef.current.playing()) {
-          howlRef.current.play();
-        }
-      } else {
-        howlRef.current.pause();
-      }
-    }
-  }, [enabled]);
 
   return null;
 }
