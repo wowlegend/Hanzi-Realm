@@ -105,6 +105,7 @@ export default function GameContainer() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const bossTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lootBoxTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const autoSpeakDone = useRef(false);
 
   useEffect(() => {
@@ -306,6 +307,9 @@ export default function GameContainer() {
       if (bossTimerRef.current) {
         clearInterval(bossTimerRef.current);
       }
+      if (lootBoxTimeoutRef.current) {
+        clearTimeout(lootBoxTimeoutRef.current);
+      }
     };
   }, [isBossMode]);
 
@@ -500,13 +504,24 @@ export default function GameContainer() {
       }
       markQuestionAnswered(currentLevel.id);
 
-      if (isBossMode) {
+      if (isBossMode && !awaitingLoot) {
+        if (bossTimerRef.current) {
+          clearInterval(bossTimerRef.current);
+          bossTimerRef.current = null;
+        }
+
         setAwaitingLoot(true);
-        setTimeout(() => {
+
+        if (lootBoxTimeoutRef.current) {
+          clearTimeout(lootBoxTimeoutRef.current);
+        }
+
+        lootBoxTimeoutRef.current = setTimeout(() => {
           setIsBossMode(false);
           setCurrentBoss(null);
           setAwaitingLoot(false);
           setIsLootBoxOpen(true);
+          lootBoxTimeoutRef.current = null;
         }, 1500);
       }
     } else {
