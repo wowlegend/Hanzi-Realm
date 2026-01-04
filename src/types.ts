@@ -1,10 +1,54 @@
+export interface PinyinChar {
+  char: string;
+  pinyin: string;
+  isHighlight?: boolean;
+  isMissing?: boolean;
+}
+
+export type BlockType = 'text' | 'dialogue' | 'idiom' | 'poem';
+
+export interface ContentBlock {
+  type: BlockType;
+  speaker?: string;
+  avatarSeed?: string;
+  segments: PinyinChar[];
+}
+
+export interface AnswerOption {
+  value: string;
+  pinyin: string;
+  radical?: string;
+  radicalMeaning?: string;
+  explanation: string;
+  isCorrect?: boolean;
+}
+
+export interface Level {
+  id: number | string;
+  grade: number;
+  scenario: string;
+  blocks: ContentBlock[];
+  targetBlockIndex: number;
+  missingSegmentIndices: number[];
+  correctAnswer: {
+    value: string;
+    pinyin: string;
+    radical?: string;
+    radicalMeaning?: string;
+    definition: string;
+  };
+  options: AnswerOption[];
+  hint?: string;
+  distractorType?: 'visual' | 'homophone' | 'shape-similar';
+}
+
 export interface CharOption {
   char: string;
   hint: string;
   explanation: string;
 }
 
-export interface Level {
+export interface LegacyLevel {
   id: number;
   scenario: string;
   sentence_prefix: string;

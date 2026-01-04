@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { Volume2, Settings as SettingsIcon, Loader, Gift, Trophy, Map, Zap } from 'lucide-react';
-import { generateLevel } from '../data/questionBank';
-import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats, MapNode, MusicState, LootReward } from '../types';
+import { Volume2, Settings as SettingsIcon, Loader, Gift, Trophy, Map, Zap, Lightbulb } from 'lucide-react';
+import { generateLevel, getLevelFullSentence, getCorrectAnswerFromLevel } from '../data/questionBank';
+import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats, MapNode, MusicState, LootReward, AnswerOption } from '../types';
 import { saveProgress, loadProgress, saveInventory, loadInventory, saveSettings, loadSettings, addWordLearned, saveMapState, loadMapState } from '../utils/storage';
 import { syncProgressToCloud, syncCompanionsToCloud, syncSettingsToCloud, syncMapStateToCloud, recordCharacterAttempt, loadProgressFromCloud, loadCompanionsFromCloud, loadSettingsFromCloud, loadMapStateFromCloud } from '../utils/cloudStorage';
 import { speakChinese, setDebugCallback } from '../utils/audio';
@@ -26,6 +26,7 @@ import NarratorAvatar from './NarratorAvatar';
 import MusicManager from './MusicManager';
 import UserProfile from './UserProfile';
 import AuthModal from './AuthModal';
+import { ContentBlockRenderer } from './RubyText';
 
 export default function GameContainer() {
   const { user } = useAuth();
@@ -96,6 +97,7 @@ export default function GameContainer() {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isLootBoxOpen, setIsLootBoxOpen] = useState(false);
   const [charRevealed, setCharRevealed] = useState(false);
+  const [showHint, setShowHint] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const bossTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -136,7 +138,7 @@ export default function GameContainer() {
 
     const apiKey = localStorage.getItem('elevenlabs_key') || sett.elevenLabsApiKey;
     const gradeToUse = sett.gradeLevel || 1;
-    const seenIds = new Set<number>();
+    const seenIds = new Set<number | string>();
     const levelsForGrade = generateLevel(gradeToUse, 10, seenIds);
 
     setLevels(levelsForGrade);
@@ -323,7 +325,8 @@ export default function GameContainer() {
     return <div className="min-h-screen flex items-center justify-center text-white">Loading...</div>;
   }
 
-  const fullSentence = currentLevel ? currentLevel.sentence_prefix + currentLevel.missing_char + currentLevel.sentence_suffix : '';
+  const fullSentence = currentLevel ? getLevelFullSentence(currentLevel) : '';
+  const correctAnswer = currentLevel ? getCorrectAnswerFromLevel(currentLevel) : '';
 
   const activeCompanion = inventory.companions.find(c => c.id === inventory.activeCompanion) || null;
 
@@ -375,6 +378,7 @@ export default function GameContainer() {
 
     autoSpeakDone.current = false;
     setCharRevealed(false);
+    setShowHint(false);
 
     setGameState(prev => ({
       ...prev,
@@ -394,11 +398,11 @@ export default function GameContainer() {
     setShowMap(false);
   };
 
-  const handleOptionClick = async (option: string) => {
+  const handleOptionClick = async (option: AnswerOption) => {
     if (gameState.showFeedback) return;
 
     sfxManager.play('click');
-    const isCorrect = option === currentLevel.missing_char;
+    const isCorrect = option.value === correctAnswer;
 
     if (gameState.gameMode === 'listening') {
       setCharRevealed(true);
@@ -406,7 +410,7 @@ export default function GameContainer() {
 
     setGameState(prev => ({
       ...prev,
-      selectedOption: option,
+      selectedOption: option.value,
       isCorrect,
       showFeedback: true,
       questionsAnswered: prev.questionsAnswered + 1,
@@ -425,16 +429,16 @@ export default function GameContainer() {
       sfxManager.play('correct');
 
       const newWords = new Set(gameState.wordsLearned);
-      newWords.add(currentLevel.missing_char);
+      newWords.add(correctAnswer);
 
-      if (!sessionStats.wordsLearned.includes(currentLevel.missing_char)) {
+      if (!sessionStats.wordsLearned.includes(correctAnswer)) {
         setSessionStats(prev => ({
           ...prev,
-          wordsLearned: [...prev.wordsLearned, currentLevel.missing_char],
+          wordsLearned: [...prev.wordsLearned, correctAnswer],
         }));
       }
 
-      addWordLearned(currentLevel.missing_char);
+      addWordLearned(correctAnswer);
 
       const baseReward = isBossMode ? 500 : 100;
       const bonusPercent = getJadeBonus();
@@ -485,7 +489,7 @@ export default function GameContainer() {
       syncProgress(newJade, newStreak, newBestStreak, gameState.questionsAnswered + 1, newBossesDefeated, gameState.worldNumber, settings.gradeLevel, Array.from(newWords));
 
       if (user) {
-        recordCharacterAttempt(user.id, currentLevel.missing_char, true);
+        recordCharacterAttempt(user.id, correctAnswer, true);
       }
 
       if (isBossMode) {
@@ -531,6 +535,7 @@ export default function GameContainer() {
 
   const handleNext = () => {
     const nextIndex = gameState.currentLevelIndex + 1;
+    setShowHint(false);
 
     if (gameState.currentNodeId) {
       const updatedNodes = mapNodes.map(n => {
@@ -641,7 +646,7 @@ export default function GameContainer() {
     saveSettings(updatedSettings);
 
     if (oldGrade !== newGrade) {
-      const seenIds = new Set<number>();
+      const seenIds = new Set<number | string>();
       const newLevels = generateLevel(newGrade, 10, seenIds);
       setLevels(newLevels);
 
@@ -815,6 +820,9 @@ export default function GameContainer() {
     );
   }
 
+  const targetBlock = currentLevel?.blocks[currentLevel.targetBlockIndex];
+  const selectedOption = currentLevel?.options.find(o => o.value === gameState.selectedOption);
+
   return (
     <>
       <GradeBackground gradeLevel={settings.gradeLevel} />
@@ -943,70 +951,87 @@ export default function GameContainer() {
                   {gameState.gameMode === 'listening' && (
                     <p className="text-yellow-400 text-sm mt-1">Listen carefully and choose the right character!</p>
                   )}
+                  {currentLevel.distractorType && (
+                    <p className="text-gray-400 text-xs mt-1">
+                      {currentLevel.distractorType === 'homophone' && 'Watch out for homophones!'}
+                      {currentLevel.distractorType === 'shape-similar' && 'Watch out for similar-looking characters!'}
+                      {currentLevel.distractorType === 'visual' && 'Look at the radicals carefully!'}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="border-2 border-white/10 rounded-2xl p-4 sm:p-6 relative bg-black/20">
-                <button
-                  onClick={handleSpeak}
-                  disabled={isSpeaking}
-                  className="absolute top-2 right-2 sm:top-4 sm:right-4 btn-3d-green p-2 rounded-lg"
-                  aria-label="Speak sentence"
-                >
-                  {isSpeaking ? (
-                    <Loader className="w-5 h-5 text-white animate-spin" />
-                  ) : (
-                    <Volume2 className="w-5 h-5 text-white" />
+                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex gap-2">
+                  {currentLevel.hint && !gameState.showFeedback && (
+                    <button
+                      onClick={() => setShowHint(!showHint)}
+                      className={`btn-3d p-2 rounded-lg transition-colors ${showHint ? 'bg-yellow-600' : 'bg-gray-600 hover:bg-gray-500'}`}
+                      aria-label="Show hint"
+                    >
+                      <Lightbulb className={`w-5 h-5 ${showHint ? 'text-yellow-200' : 'text-gray-300'}`} />
+                    </button>
                   )}
-                </button>
-
-                <div
-                  className={`text-2xl sm:text-4xl font-bold text-center pr-12 transition-all duration-300 ${
-                    isAudioPlaying ? 'text-[#00b06f]' : 'text-white'
-                  }`}
-                >
-                  {currentLevel.sentence_prefix}
-                  <motion.span
-                    animate={
-                      gameState.showFeedback && gameState.isCorrect
-                        ? { scale: [1, 1.3, 1], rotateY: [0, 360] }
-                        : {}
-                    }
-                    transition={{ duration: 0.6 }}
-                    className={`
-                      inline-block rounded-lg px-3 sm:px-4 py-1 sm:py-2 mx-1 sm:mx-2 min-w-[3rem] sm:min-w-[4rem]
-                      ${gameState.showFeedback && gameState.isCorrect
-                        ? 'bg-[#00b06f] text-white border-4 border-white'
-                        : gameState.showFeedback && !gameState.isCorrect
-                        ? 'bg-[#ff3e3e] text-white border-4 border-black'
-                        : 'bg-[#00b06f] bg-opacity-20 border-2 border-dashed border-[#00b06f]'
-                      }
-                    `}
+                  <button
+                    onClick={handleSpeak}
+                    disabled={isSpeaking}
+                    className="btn-3d-green p-2 rounded-lg"
+                    aria-label="Speak sentence"
                   >
-                    {gameState.showFeedback
-                      ? gameState.selectedOption
-                      : gameState.gameMode === 'listening' && !charRevealed
-                      ? '???'
-                      : '___'}
-                  </motion.span>
-                  {currentLevel.sentence_suffix}
+                    {isSpeaking ? (
+                      <Loader className="w-5 h-5 text-white animate-spin" />
+                    ) : (
+                      <Volume2 className="w-5 h-5 text-white" />
+                    )}
+                  </button>
                 </div>
+
+                <div className="space-y-4 pr-20">
+                  {currentLevel.blocks.map((block, blockIdx) => (
+                    <ContentBlockRenderer
+                      key={blockIdx}
+                      block={block}
+                      missingIndices={blockIdx === currentLevel.targetBlockIndex ? currentLevel.missingSegmentIndices : []}
+                      selectedAnswer={gameState.selectedOption || undefined}
+                      isCorrect={gameState.isCorrect}
+                      showFeedback={gameState.showFeedback}
+                      size="md"
+                      fireMode={gameState.fireMode}
+                      isListeningMode={gameState.gameMode === 'listening'}
+                      charRevealed={charRevealed}
+                    />
+                  ))}
+                </div>
+
+                <AnimatePresence>
+                  {showHint && currentLevel.hint && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="mt-4 bg-yellow-600/20 border border-yellow-500/50 rounded-xl p-3 flex items-start gap-2"
+                    >
+                      <Lightbulb className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-yellow-200 text-sm">{currentLevel.hint}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
             <div className="space-y-3 sm:space-y-4 mb-6">
               {currentLevel.options.map((option) => {
-                const isSelected = gameState.selectedOption === option.char;
-                const isCorrectAnswer = option.char === currentLevel.missing_char;
+                const isSelected = gameState.selectedOption === option.value;
+                const isCorrectAnswer = option.value === correctAnswer;
                 const showAsCorrect = gameState.showFeedback && isSelected && gameState.isCorrect;
                 const showAsWrong = gameState.showFeedback && isSelected && !gameState.isCorrect;
                 const showCorrectHighlight = gameState.showFeedback && !gameState.isCorrect && isCorrectAnswer;
 
                 return (
                   <motion.button
-                    key={option.char}
-                    onClick={() => handleOptionClick(option.char)}
-                    onHoverStart={() => setHoveredOption(option.char)}
+                    key={option.value}
+                    onClick={() => handleOptionClick(option)}
+                    onHoverStart={() => setHoveredOption(option.value)}
                     onHoverEnd={() => setHoveredOption(null)}
                     disabled={gameState.showFeedback}
                     whileHover={!gameState.showFeedback ? { scale: 1.02, rotateX: 5 } : {}}
@@ -1023,14 +1048,17 @@ export default function GameContainer() {
                     `}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-3xl sm:text-4xl">{option.char}</span>
-                      {hoveredOption === option.char && !gameState.showFeedback && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-3xl sm:text-4xl">{option.value}</span>
+                        <span className="text-gray-400 text-base sm:text-lg font-mono">{option.pinyin}</span>
+                      </div>
+                      {hoveredOption === option.value && !gameState.showFeedback && option.radical && (
                         <span className="text-sm sm:text-base text-gray-300 bg-gray-900/60 px-3 py-1 rounded-lg border-2 border-gray-600">
-                          {option.hint}
+                          Radical: {option.radical} ({option.radicalMeaning || 'hint'})
                         </span>
                       )}
                       {gameState.showFeedback && isSelected && (
-                        <span className="text-sm sm:text-base">
+                        <span className="text-sm sm:text-base text-right max-w-[50%]">
                           {option.explanation}
                         </span>
                       )}
@@ -1051,9 +1079,21 @@ export default function GameContainer() {
                 }`}
               >
                 <p className="text-lg sm:text-xl font-bold text-white drop-shadow">
-                  {gameState.isCorrect ? currentLevel.correct_explanation : (
+                  {gameState.isCorrect ? (
                     <>
-                      Wrong! That means "{currentLevel.options.find(o => o.char === gameState.selectedOption)?.explanation}"!
+                      {currentLevel.correctAnswer.definition}
+                      {currentLevel.correctAnswer.radical && (
+                        <span className="block text-sm mt-2 text-green-200">
+                          Radical: {currentLevel.correctAnswer.radical} ({currentLevel.correctAnswer.radicalMeaning})
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      Wrong! {selectedOption?.explanation}
+                      <span className="block text-sm mt-2 text-yellow-200">
+                        Correct answer: {correctAnswer} ({currentLevel.correctAnswer.pinyin})
+                      </span>
                       {gameState.streakShieldActive && !gameState.streakShieldUsed && (
                         <span className="block text-yellow-300 mt-2">Shield protected your streak!</span>
                       )}
