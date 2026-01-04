@@ -101,6 +101,7 @@ export default function GameContainer() {
   const [charRevealed, setCharRevealed] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [currentBoss, setCurrentBoss] = useState<Boss | null>(null);
+  const [awaitingLoot, setAwaitingLoot] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const bossTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -500,9 +501,11 @@ export default function GameContainer() {
       markQuestionAnswered(currentLevel.id);
 
       if (isBossMode) {
+        setAwaitingLoot(true);
         setTimeout(() => {
           setIsBossMode(false);
           setCurrentBoss(null);
+          setAwaitingLoot(false);
           setIsLootBoxOpen(true);
         }, 1500);
       }
@@ -740,6 +743,49 @@ export default function GameContainer() {
 
       setInventory(newInventory);
       saveInventory(newInventory);
+    }
+  };
+
+  const handleLootBoxClose = () => {
+    setIsLootBoxOpen(false);
+
+    if (gameState.currentNodeId) {
+      const updatedNodes = mapNodes.map(n => {
+        if (n.id === gameState.currentNodeId) return { ...n, status: 'completed' as const };
+        const nodeIndex = mapNodes.findIndex(mn => mn.id === n.id);
+        const completedIndex = mapNodes.findIndex(mn => mn.id === gameState.currentNodeId);
+        if (nodeIndex === completedIndex + 1) return { ...n, status: 'unlocked' as const };
+        return n;
+      });
+
+      setMapNodes(updatedNodes);
+      saveMapState(updatedNodes, gameState.worldNumber);
+      if (user) {
+        syncMapStateToCloud(user.id, updatedNodes, gameState.worldNumber);
+      }
+
+      const allCompleted = updatedNodes.every(n => n.status === 'completed');
+      if (allCompleted) {
+        setIsLevelClearedOpen(true);
+      } else {
+        setShowMap(true);
+      }
+
+      setGameState(prev => ({
+        ...prev,
+        selectedOption: null,
+        isCorrect: null,
+        showFeedback: false,
+        currentNodeId: null,
+      }));
+    } else {
+      setShowMap(true);
+      setGameState(prev => ({
+        ...prev,
+        selectedOption: null,
+        isCorrect: null,
+        showFeedback: false,
+      }));
     }
   };
 
@@ -1130,7 +1176,7 @@ export default function GameContainer() {
               </motion.div>
             )}
 
-            {gameState.showFeedback && (
+            {gameState.showFeedback && !awaitingLoot && (
               <motion.button
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -1141,6 +1187,16 @@ export default function GameContainer() {
               >
                 {gameState.currentNodeId ? 'Back to Map' : gameState.currentLevelIndex < levels.length - 1 ? 'Next Challenge' : 'New Adventure'}
               </motion.button>
+            )}
+
+            {awaitingLoot && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-4"
+              >
+                <p className="text-yellow-400 font-bold text-lg animate-pulse">Opening loot box...</p>
+              </motion.div>
             )}
           </motion.div>
 
@@ -1196,7 +1252,7 @@ export default function GameContainer() {
 
         <LootBoxModal
           isOpen={isLootBoxOpen}
-          onClose={() => setIsLootBoxOpen(false)}
+          onClose={handleLootBoxClose}
           onReward={handleLootReward}
         />
 
