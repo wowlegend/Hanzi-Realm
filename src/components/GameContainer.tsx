@@ -2,20 +2,22 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { Volume2, Settings as SettingsIcon, Loader, Gift, Trophy, Map, Zap, Lightbulb } from 'lucide-react';
-import { generateLevel, getLevelFullSentence, getCorrectAnswerFromLevel } from '../data/questionBank';
+import { generateLevel, getLevelFullSentence, getCorrectAnswerFromLevel, markQuestionAnswered } from '../data/questionBank';
 import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats, MapNode, MusicState, LootReward, AnswerOption } from '../types';
 import { saveProgress, loadProgress, saveInventory, loadInventory, saveSettings, loadSettings, addWordLearned, saveMapState, loadMapState } from '../utils/storage';
 import { syncProgressToCloud, syncCompanionsToCloud, syncSettingsToCloud, syncMapStateToCloud, recordCharacterAttempt, loadProgressFromCloud, loadCompanionsFromCloud, loadSettingsFromCloud, loadMapStateFromCloud } from '../utils/cloudStorage';
+import { recordQuestionAttempt } from '../utils/spacedRepetition';
 import { speakChinese, setDebugCallback } from '../utils/audio';
 import { sfxManager } from '../utils/sfx';
 import { AUDIO_DEFAULTS } from '../utils/constants';
 import { generateWorldNodes } from '../utils/mapGenerator';
 import { getBuffDescription } from '../data/companions';
+import { getBossForWorld, Boss } from '../data/bosses';
 import { useAuth } from '../contexts/AuthContext';
 import SettingsModal from './SettingsModal';
 import CompanionDisplay from './CompanionDisplay';
 import GachaModal from './GachaModal';
-import BossBanner from './BossBanner';
+import BossBattle from './BossBattle';
 import ReportCard from './ReportCard';
 import GradeBackground from './GradeBackground';
 import DebugLog from './DebugLog';
@@ -98,6 +100,7 @@ export default function GameContainer() {
   const [isLootBoxOpen, setIsLootBoxOpen] = useState(false);
   const [charRevealed, setCharRevealed] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [currentBoss, setCurrentBoss] = useState<Boss | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const bossTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -285,7 +288,7 @@ export default function GameContainer() {
         setBossTimer(prev => {
           if (prev <= 1) {
             handleBossTimeout();
-            return 10;
+            return 15;
           }
           return prev - 1;
         });
@@ -295,7 +298,7 @@ export default function GameContainer() {
         clearInterval(bossTimerRef.current);
         bossTimerRef.current = null;
       }
-      setBossTimer(10);
+      setBossTimer(15);
     }
 
     return () => {
@@ -391,8 +394,10 @@ export default function GameContainer() {
     }));
 
     if (isBoss) {
+      const boss = getBossForWorld(gameState.worldNumber);
+      setCurrentBoss(boss);
       setIsBossMode(true);
-      setBossTimer(10);
+      setBossTimer(15);
     }
 
     setShowMap(false);
@@ -490,10 +495,14 @@ export default function GameContainer() {
 
       if (user) {
         recordCharacterAttempt(user.id, correctAnswer, true);
+        recordQuestionAttempt(user.id, String(currentLevel.id), true);
       }
+      markQuestionAnswered(currentLevel.id);
 
       if (isBossMode) {
         setTimeout(() => {
+          setIsBossMode(false);
+          setCurrentBoss(null);
           setIsLootBoxOpen(true);
         }, 1500);
       }
@@ -501,6 +510,11 @@ export default function GameContainer() {
       sfxManager.play('wrong');
       setShake(true);
       setTimeout(() => setShake(false), 500);
+
+      if (user) {
+        recordQuestionAttempt(user.id, String(currentLevel.id), false);
+      }
+      markQuestionAnswered(currentLevel.id);
 
       const shouldResetStreak = !(gameState.streakShieldActive && !gameState.streakShieldUsed);
 
@@ -515,10 +529,11 @@ export default function GameContainer() {
           streakShieldUsed: true,
         }));
       }
-    }
 
-    if (isBossMode) {
-      setIsBossMode(false);
+      if (isBossMode) {
+        setIsBossMode(false);
+        setCurrentBoss(null);
+      }
     }
   };
 
@@ -527,6 +542,7 @@ export default function GameContainer() {
     setShake(true);
     setTimeout(() => setShake(false), 500);
     setIsBossMode(false);
+    setCurrentBoss(null);
     setGameState(prev => ({
       ...prev,
       currentStreak: 0,
@@ -832,9 +848,14 @@ export default function GameContainer() {
         ref={containerRef}
         className="relative min-h-screen flex flex-col items-center justify-center p-4 sm:p-6"
       >
-        <AnimatePresence>
-          {isBossMode && <BossBanner timeLeft={bossTimer} maxTime={10} />}
-        </AnimatePresence>
+        {currentBoss && (
+          <BossBattle
+            boss={currentBoss}
+            timeLeft={bossTimer}
+            maxTime={15}
+            isActive={isBossMode}
+          />
+        )}
 
         <motion.div
           animate={shake ? { x: [-10, 10, -10, 10, 0] } : {}}

@@ -12,6 +12,7 @@ interface RubyCharProps {
   showFeedback?: boolean;
   size?: 'sm' | 'md' | 'lg';
   fireMode?: boolean;
+  isHiddenInListeningMode?: boolean;
 }
 
 export function RubyChar({
@@ -25,12 +26,26 @@ export function RubyChar({
   showFeedback = false,
   size = 'md',
   fireMode = false,
+  isHiddenInListeningMode = false,
 }: RubyCharProps) {
   const sizeClasses = {
     sm: { char: 'text-xl sm:text-2xl', pinyin: 'text-[10px] sm:text-xs' },
     md: { char: 'text-2xl sm:text-3xl', pinyin: 'text-xs sm:text-sm' },
     lg: { char: 'text-3xl sm:text-4xl', pinyin: 'text-sm sm:text-base' },
   };
+
+  if (isHiddenInListeningMode && !showFeedback) {
+    return (
+      <div className="flex flex-col items-center mx-0.5 sm:mx-1 select-none">
+        <span className={`${sizeClasses[size].char} font-black text-yellow-500/70`}>
+          ?
+        </span>
+        <span className={`${sizeClasses[size].pinyin} text-gray-600 font-mono mt-0.5`}>
+          ?
+        </span>
+      </div>
+    );
+  }
 
   if (isMissing) {
     const displayChar = showFeedback ? selectedAnswer : isRevealed ? '___' : '___';
@@ -113,6 +128,7 @@ export function RubyText({
       {segments.map((seg, idx) => {
         const isMissing = missingIndices.includes(idx);
         const isRevealed = !isListeningMode || charRevealed;
+        const isHiddenInListeningMode = isListeningMode && !charRevealed && !showFeedback && !isMissing;
 
         return (
           <RubyChar
@@ -127,6 +143,7 @@ export function RubyText({
             showFeedback={showFeedback}
             size={size}
             fireMode={fireMode}
+            isHiddenInListeningMode={isHiddenInListeningMode}
           />
         );
       })}
@@ -162,9 +179,11 @@ export function ContentBlockRenderer({
       <div className="flex items-start gap-3 sm:gap-4">
         <div className="flex-shrink-0">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm sm:text-base border-2 border-white/30">
-            {block.speaker?.charAt(0) || '?'}
+            {isListeningMode && !charRevealed && !showFeedback ? '?' : block.speaker?.charAt(0) || '?'}
           </div>
-          <p className="text-center text-xs text-gray-400 mt-1">{block.speaker}</p>
+          <p className="text-center text-xs text-gray-400 mt-1">
+            {isListeningMode && !charRevealed && !showFeedback ? '???' : block.speaker}
+          </p>
         </div>
         <div className="flex-1 bg-white/5 rounded-2xl rounded-tl-sm p-3 sm:p-4 border border-white/10">
           <RubyText
