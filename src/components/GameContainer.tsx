@@ -504,25 +504,25 @@ export default function GameContainer() {
       }
       markQuestionAnswered(currentLevel.id);
 
-      if (isBossMode && !awaitingLoot) {
+      if (isBossMode) {
         if (bossTimerRef.current) {
           clearInterval(bossTimerRef.current);
           bossTimerRef.current = null;
         }
 
-        setAwaitingLoot(true);
-
         if (lootBoxTimeoutRef.current) {
           clearTimeout(lootBoxTimeoutRef.current);
         }
 
+        setCurrentBoss(null);
+        setAwaitingLoot(true);
+
         lootBoxTimeoutRef.current = setTimeout(() => {
-          setIsBossMode(false);
-          setCurrentBoss(null);
           setAwaitingLoot(false);
           setIsLootBoxOpen(true);
+          setIsBossMode(false);
           lootBoxTimeoutRef.current = null;
-        }, 1500);
+        }, 2000);
       }
     } else {
       sfxManager.play('wrong');
@@ -549,7 +549,10 @@ export default function GameContainer() {
       }
 
       if (isBossMode) {
-        setIsBossMode(false);
+        if (bossTimerRef.current) {
+          clearInterval(bossTimerRef.current);
+          bossTimerRef.current = null;
+        }
         setCurrentBoss(null);
       }
     }
@@ -559,11 +562,19 @@ export default function GameContainer() {
     sfxManager.play('wrong');
     setShake(true);
     setTimeout(() => setShake(false), 500);
-    setIsBossMode(false);
+
+    if (bossTimerRef.current) {
+      clearInterval(bossTimerRef.current);
+      bossTimerRef.current = null;
+    }
+
     setCurrentBoss(null);
     setGameState(prev => ({
       ...prev,
       currentStreak: 0,
+      selectedOption: null,
+      isCorrect: false,
+      showFeedback: true,
     }));
   };
 
@@ -572,11 +583,19 @@ export default function GameContainer() {
     setShowHint(false);
 
     if (gameState.currentNodeId) {
+      const currentNode = mapNodes.find(n => n.id === gameState.currentNodeId);
+      const isBossNode = currentNode?.type === 'boss';
+      const shouldCompleteNode = !isBossNode || gameState.isCorrect;
+
       const updatedNodes = mapNodes.map(n => {
-        if (n.id === gameState.currentNodeId) return { ...n, status: 'completed' as const };
-        const nodeIndex = mapNodes.findIndex(mn => mn.id === n.id);
-        const completedIndex = mapNodes.findIndex(mn => mn.id === gameState.currentNodeId);
-        if (nodeIndex === completedIndex + 1) return { ...n, status: 'unlocked' as const };
+        if (n.id === gameState.currentNodeId && shouldCompleteNode) {
+          return { ...n, status: 'completed' as const };
+        }
+        if (shouldCompleteNode) {
+          const nodeIndex = mapNodes.findIndex(mn => mn.id === n.id);
+          const completedIndex = mapNodes.findIndex(mn => mn.id === gameState.currentNodeId);
+          if (nodeIndex === completedIndex + 1) return { ...n, status: 'unlocked' as const };
+        }
         return n;
       });
 
@@ -591,6 +610,10 @@ export default function GameContainer() {
         setIsLevelClearedOpen(true);
       } else {
         setShowMap(true);
+      }
+
+      if (isBossNode) {
+        setIsBossMode(false);
       }
 
       setGameState(prev => ({
