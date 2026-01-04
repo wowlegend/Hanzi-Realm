@@ -17,79 +17,66 @@ const TRACKS: Record<MusicState, string> = {
 
 export default function MusicManager({ state, volume, enabled }: MusicManagerProps) {
   const howlRef = useRef<Howl | null>(null);
-  const currentStateRef = useRef<MusicState | null>(null);
-  const isUnlocked = useRef(false);
+  const currentUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const unlock = () => {
-      isUnlocked.current = true;
-    };
+    const url = TRACKS[state];
 
-    document.addEventListener('click', unlock, { once: true });
-    document.addEventListener('touchstart', unlock, { once: true });
-    document.addEventListener('keydown', unlock, { once: true });
-
-    return () => {
-      document.removeEventListener('click', unlock);
-      document.removeEventListener('touchstart', unlock);
-      document.removeEventListener('keydown', unlock);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!enabled || !isUnlocked.current) {
-      if (howlRef.current) {
-        howlRef.current.stop();
+    if (currentUrlRef.current === url && howlRef.current) {
+      if (!howlRef.current.playing() && enabled) {
+        howlRef.current.play();
       }
       return;
     }
 
-    if (state !== currentStateRef.current) {
-      if (howlRef.current) {
-        howlRef.current.stop();
-        howlRef.current.unload();
-      }
+    if (howlRef.current) {
+      howlRef.current.stop();
+      howlRef.current.unload();
+    }
 
-      try {
-        const sound = new Howl({
-          src: [TRACKS[state]],
-          html5: true,
-          loop: true,
-          volume: Math.min(volume, 0.2),
-          autoplay: true,
-          onloaderror: (id, err) => {
-            console.warn(`Failed to load music: ${err}`);
-          },
-          onplayerror: (id, err) => {
-            console.warn(`Failed to play music: ${err}`);
-            sound.once('unlock', () => {
-              sound.play();
-            });
-          },
+    if (!enabled) return;
+
+    const sound = new Howl({
+      src: [url],
+      html5: true,
+      loop: true,
+      volume: volume,
+      autoplay: true,
+      onloaderror: (id, err) => console.warn('BGM Load Error:', err),
+      onplayerror: (id, err) => {
+        console.warn('BGM Play Error (Autoplay blocked):', err);
+        sound.once('unlock', () => {
+          sound.play();
         });
+      },
+    });
 
-        howlRef.current = sound;
-        currentStateRef.current = state;
-      } catch (err) {
-        console.warn('Error creating audio:', err);
-      }
-    }
-  }, [state, enabled, volume]);
+    howlRef.current = sound;
+    currentUrlRef.current = url;
 
-  useEffect(() => {
-    if (howlRef.current && enabled) {
-      howlRef.current.volume(Math.min(volume, 0.2));
-    }
-  }, [volume, enabled]);
-
-  useEffect(() => {
     return () => {
-      if (howlRef.current) {
-        howlRef.current.stop();
-        howlRef.current.unload();
-      }
+      sound.stop();
+      sound.unload();
     };
-  }, []);
+  }, [state, enabled]);
+
+  useEffect(() => {
+    if (howlRef.current) {
+      howlRef.current.volume(volume);
+    }
+  }, [volume]);
+
+  useEffect(() => {
+    if (howlRef.current) {
+      if (enabled) {
+        if (!howlRef.current.playing()) {
+          howlRef.current.play();
+        }
+      } else {
+        howlRef.current.pause();
+      }
+    }
+  }, [enabled]);
 
   return null;
 }
