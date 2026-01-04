@@ -259,6 +259,33 @@ export default function SettingsModal({
                     <p className="text-gray-500 text-xs mt-2">Adjust the speaking speed for better comprehension</p>
                   </div>
 
+                  <div>
+                    <label className="block text-gray-300 text-sm mb-2">
+                      Background Music Volume: {Math.round((settings.bgmVolume ?? 0.1) * 100)}%
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={settings.bgmVolume ?? 0.1}
+                      onChange={(e) => {
+                        const newVolume = Number(e.target.value);
+                        onSettingsChange({
+                          ...settings,
+                          bgmVolume: newVolume,
+                        });
+                      }}
+                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#00b06f]"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>0% (Muted)</span>
+                      <span>50%</span>
+                      <span>100% (Max)</span>
+                    </div>
+                    <p className="text-gray-500 text-xs mt-2">Control background music volume</p>
+                  </div>
+
                   <button
                     onClick={handleSaveSettings}
                     className="w-full bg-[#00b06f] hover:bg-[#00d184] text-white font-bold py-3 rounded-lg transition-colors"

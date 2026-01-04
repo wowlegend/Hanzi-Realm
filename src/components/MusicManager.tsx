@@ -52,29 +52,40 @@ export default function MusicManager({ state, volume, enabled }: MusicManagerPro
     console.log(`Attempting to play: ${state}`);
     const url = TRACKS[state];
 
-    const sound = new Howl({
-      src: [url],
-      html5: true,
-      loop: true,
-      volume: Math.max(volume, 0.5),
-      autoplay: true,
-      onload: () => console.log(`Loaded BGM: ${state}`),
-      onloaderror: (id, err) => console.error(`Load Error for ${state}:`, err),
-      onplayerror: (id, err) => {
-        console.error(`Autoplay Blocked for ${state}:`, err);
-        sound.once('unlock', () => {
-          console.log('Unlocked and Playing');
-          sound.play();
-        });
-      },
-    });
+    try {
+      const sound = new Howl({
+        src: [url],
+        html5: true,
+        loop: true,
+        volume: Math.max(volume, 0.5),
+        autoplay: true,
+        onload: () => console.log(`Loaded BGM: ${state}`),
+        onloaderror: (id, err) => {
+          console.warn(`BGM Load Error for ${state} (non-critical):`, err);
+        },
+        onplayerror: (id, err) => {
+          console.warn(`BGM Autoplay Blocked for ${state}:`, err);
+          sound.once('unlock', () => {
+            console.log('Unlocked and Playing');
+            sound.play().catch(e => console.warn('Play failed:', e));
+          });
+        },
+      });
 
-    howlRef.current = sound;
+      howlRef.current = sound;
 
-    return () => {
-      sound.stop();
-      sound.unload();
-    };
+      return () => {
+        try {
+          sound.stop();
+          sound.unload();
+        } catch (e) {
+          console.warn('Error cleaning up audio:', e);
+        }
+      };
+    } catch (error) {
+      console.warn('Error initializing background music:', error);
+      return;
+    }
   }, [state, enabled]);
 
   useEffect(() => {
