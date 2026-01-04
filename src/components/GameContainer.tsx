@@ -5,11 +5,13 @@ import { Volume2, Settings as SettingsIcon, Loader, Gift, Trophy, Map, Zap } fro
 import { generateLevel } from '../data/questionBank';
 import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats, MapNode, MusicState, LootReward } from '../types';
 import { saveProgress, loadProgress, saveInventory, loadInventory, saveSettings, loadSettings, addWordLearned, saveMapState, loadMapState } from '../utils/storage';
+import { syncProgressToCloud, syncCompanionsToCloud, syncSettingsToCloud, syncMapStateToCloud, recordCharacterAttempt, loadProgressFromCloud, loadCompanionsFromCloud, loadSettingsFromCloud, loadMapStateFromCloud } from '../utils/cloudStorage';
 import { speakChinese, setDebugCallback } from '../utils/audio';
 import { sfxManager } from '../utils/sfx';
 import { AUDIO_DEFAULTS } from '../utils/constants';
 import { generateWorldNodes } from '../utils/mapGenerator';
 import { getBuffDescription } from '../data/companions';
+import { useAuth } from '../contexts/AuthContext';
 import SettingsModal from './SettingsModal';
 import CompanionDisplay from './CompanionDisplay';
 import GachaModal from './GachaModal';
@@ -22,9 +24,13 @@ import WorldMap from './WorldMap';
 import LootBoxModal from './LootBoxModal';
 import NarratorAvatar from './NarratorAvatar';
 import MusicManager from './MusicManager';
+import UserProfile from './UserProfile';
+import AuthModal from './AuthModal';
 
 export default function GameContainer() {
+  const { user } = useAuth();
   const [levels, setLevels] = useState<Level[]>([]);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [gameState, setGameState] = useState<GameState>({
     currentLevelIndex: 0,
     jade: 0,
@@ -113,6 +119,16 @@ export default function GameContainer() {
       localStorage.setItem('azureVoice', AUDIO_DEFAULTS.VOICE);
     }
 
+    loadGameData();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadCloudData();
+    }
+  }, [user]);
+
+  const loadGameData = async () => {
     const progress = loadProgress();
     const inv = loadInventory();
     const sett = loadSettings();
@@ -158,7 +174,91 @@ export default function GameContainer() {
       setMapNodes(nodes);
       saveMapState(nodes, progress.worldNumber || 1);
     }
-  }, []);
+  };
+
+  const loadCloudData = async () => {
+    if (!user) return;
+
+    try {
+      const cloudProgress = await loadProgressFromCloud(user.id);
+      if (cloudProgress) {
+        setGameState(prev => ({
+          ...prev,
+          jade: cloudProgress.jade,
+          currentStreak: cloudProgress.current_streak,
+          bestStreak: cloudProgress.best_streak,
+          questionsAnswered: cloudProgress.questions_answered,
+          bossesDefeated: cloudProgress.bosses_defeated,
+          worldNumber: cloudProgress.world_number,
+          gradeLevel: cloudProgress.grade_level,
+          wordsLearned: new Set(cloudProgress.words_learned),
+        }));
+
+        const levelsForGrade = generateLevel(cloudProgress.grade_level, 10, new Set());
+        setLevels(levelsForGrade);
+      }
+
+      const cloudCompanions = await loadCompanionsFromCloud(user.id);
+      if (cloudCompanions) {
+        setInventory(prev => ({
+          ...prev,
+          companions: cloudCompanions.companions,
+          activeCompanion: cloudCompanions.activeCompanion,
+        }));
+      }
+
+      const cloudSettings = await loadSettingsFromCloud(user.id);
+      if (cloudSettings) {
+        setSettings(prev => ({
+          ...prev,
+          ...cloudSettings.settings,
+          gradeLevel: cloudProgress?.grade_level || prev.gradeLevel,
+        }));
+        setInventory(prev => ({
+          ...prev,
+          theme: cloudSettings.theme,
+        }));
+      }
+
+      const cloudMap = await loadMapStateFromCloud(user.id, cloudProgress?.world_number || 1);
+      if (cloudMap) {
+        setMapNodes(cloudMap);
+      }
+    } catch (error) {
+      console.error('Error loading cloud data:', error);
+    }
+  };
+
+  const syncProgress = async (
+    jade: number,
+    currentStreak: number,
+    bestStreak: number,
+    questionsAnswered: number,
+    bossesDefeated: number,
+    worldNumber: number,
+    gradeLevel: number,
+    wordsLearned: string[]
+  ) => {
+    saveProgress(jade, bestStreak, bossesDefeated, questionsAnswered, wordsLearned, worldNumber);
+
+    if (user) {
+      try {
+        await syncProgressToCloud(
+          user.id,
+          jade,
+          currentStreak,
+          bestStreak,
+          questionsAnswered,
+          bossesDefeated,
+          worldNumber,
+          gradeLevel,
+          wordsLearned
+        );
+      } catch (error) {
+        console.error('Error syncing progress to cloud:', error);
+      }
+    }
+  };
 
   useEffect(() => {
     if (levels.length > 0 && gameState.currentLevelIndex >= levels.length) {
@@ -259,8 +359,11 @@ export default function GameContainer() {
 
       setMapNodes(updatedNodes);
       saveMapState(updatedNodes, gameState.worldNumber);
+      if (user) {
+        syncMapStateToCloud(user.id, updatedNodes, gameState.worldNumber);
+      }
       setGameState(prev => ({ ...prev, jade: newJade }));
-      saveProgress(newJade, gameState.bestStreak, gameState.bossesDefeated, gameState.questionsAnswered, Array.from(gameState.wordsLearned), gameState.worldNumber);
+      syncProgress(newJade, gameState.currentStreak, gameState.bestStreak, gameState.questionsAnswered, gameState.bossesDefeated, gameState.worldNumber, settings.gradeLevel, Array.from(gameState.wordsLearned));
       return;
     }
 
@@ -379,7 +482,11 @@ export default function GameContainer() {
         jadeEarned: prev.jadeEarned + jadeReward,
       }));
 
-      saveProgress(newJade, newBestStreak, newBossesDefeated, gameState.questionsAnswered + 1, Array.from(newWords), gameState.worldNumber);
+      syncProgress(newJade, newStreak, newBestStreak, gameState.questionsAnswered + 1, newBossesDefeated, gameState.worldNumber, settings.gradeLevel, Array.from(newWords));
+
+      if (user) {
+        recordCharacterAttempt(user.id, currentLevel.missing_char, true);
+      }
 
       if (isBossMode) {
         setTimeout(() => {
@@ -436,6 +543,9 @@ export default function GameContainer() {
 
       setMapNodes(updatedNodes);
       saveMapState(updatedNodes, gameState.worldNumber);
+      if (user) {
+        syncMapStateToCloud(user.id, updatedNodes, gameState.worldNumber);
+      }
 
       const allCompleted = updatedNodes.every(n => n.status === 'completed');
       if (allCompleted) {
@@ -496,7 +606,7 @@ export default function GameContainer() {
       currentNodeId: null,
     }));
 
-    saveProgress(newJade, gameState.bestStreak, gameState.bossesDefeated, gameState.questionsAnswered, Array.from(gameState.wordsLearned), newWorldNumber);
+    syncProgress(newJade, gameState.currentStreak, gameState.bestStreak, gameState.questionsAnswered, gameState.bossesDefeated, newWorldNumber, settings.gradeLevel, Array.from(gameState.wordsLearned));
 
     setIsLevelClearedOpen(false);
     setShowMap(true);
@@ -574,6 +684,9 @@ export default function GameContainer() {
 
     setInventory(newInventory);
     saveInventory(newInventory);
+    if (user) {
+      syncCompanionsToCloud(user.id, newInventory.companions, newInventory.activeCompanion);
+    }
 
     const newJade = gameState.jade - 500;
     setGameState(prev => ({
@@ -581,14 +694,14 @@ export default function GameContainer() {
       jade: newJade,
       streakShieldActive: companion.buffType === 'streak_shield',
     }));
-    saveProgress(newJade, gameState.bestStreak, gameState.bossesDefeated, gameState.questionsAnswered, Array.from(gameState.wordsLearned), gameState.worldNumber);
+    syncProgress(newJade, gameState.currentStreak, gameState.bestStreak, gameState.questionsAnswered, gameState.bossesDefeated, gameState.worldNumber, settings.gradeLevel, Array.from(gameState.wordsLearned));
   };
 
   const handleLootReward = (reward: LootReward) => {
     if (reward.type === 'jade' && reward.amount) {
       const newJade = gameState.jade + reward.amount;
       setGameState(prev => ({ ...prev, jade: newJade }));
-      saveProgress(newJade, gameState.bestStreak, gameState.bossesDefeated, gameState.questionsAnswered, Array.from(gameState.wordsLearned), gameState.worldNumber);
+      syncProgress(newJade, gameState.currentStreak, gameState.bestStreak, gameState.questionsAnswered, gameState.bossesDefeated, gameState.worldNumber, settings.gradeLevel, Array.from(gameState.wordsLearned));
     } else if (reward.type === 'companion' && reward.companion) {
       const updatedCompanions = [...inventory.companions];
       const existingIndex = updatedCompanions.findIndex(c => c.id === reward.companion!.id);
@@ -657,6 +770,7 @@ export default function GameContainer() {
           >
             <SettingsIcon className="w-5 h-5 text-[#ffd700]" />
           </motion.button>
+          <UserProfile onLoginClick={() => setIsAuthModalOpen(true)} />
         </div>
 
         <SettingsModal
@@ -691,6 +805,11 @@ export default function GameContainer() {
           message={debugMessage}
           isError={debugIsError}
           onClose={() => setDebugMessage('')}
+        />
+
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
         />
       </>
     );
@@ -749,6 +868,7 @@ export default function GameContainer() {
               >
                 <SettingsIcon className="w-6 h-6 text-[#ffd700]" />
               </motion.button>
+              <UserProfile onLoginClick={() => setIsAuthModalOpen(true)} />
             </div>
           </div>
 
@@ -1025,6 +1145,11 @@ export default function GameContainer() {
           message={debugMessage}
           isError={debugIsError}
           onClose={() => setDebugMessage('')}
+        />
+
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
         />
       </div>
     </>
