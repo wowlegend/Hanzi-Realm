@@ -9,10 +9,10 @@ interface MusicManagerProps {
 }
 
 const TRACKS: Record<MusicState, string> = {
-  menu: 'https://assets.mixkit.co/music/preview/mixkit-dreaming-big-31.mp3',
-  map: 'https://assets.mixkit.co/music/preview/mixkit-games-worldbeat-466.mp3',
-  battle: 'https://assets.mixkit.co/music/preview/mixkit-spirit-in-the-woods-139.mp3',
-  boss: 'https://assets.mixkit.co/music/preview/mixkit-driving-ambition-32.mp3',
+  menu: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Pamgaea.mp3',
+  map: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Adventure%20Meme.mp3',
+  battle: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Pixel%20Peeker%20Polka%20-%20Faster.mp3',
+  boss: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ready%20Aim%20Fire.mp3',
 };
 
 export default function MusicManager({ state, volume, enabled }: MusicManagerProps) {
@@ -57,18 +57,24 @@ export default function MusicManager({ state, volume, enabled }: MusicManagerPro
         src: [url],
         html5: true,
         loop: true,
-        volume: Math.max(volume, 0.5),
+        volume: volume,
         autoplay: true,
-        onload: () => console.log(`Loaded BGM: ${state}`),
+        onload: () => {
+          console.log(`✓ BGM Loaded Successfully: ${state}`);
+        },
         onloaderror: (id, err) => {
-          console.warn(`BGM Load Error for ${state} (non-critical):`, err);
+          console.error(`✗ BGM Load Failed for ${state}:`, err);
+          console.error(`URL attempted: ${url}`);
         },
         onplayerror: (id, err) => {
-          console.warn(`BGM Autoplay Blocked for ${state}:`, err);
+          console.warn(`⚠ Autoplay Blocked (need user interaction):`, err);
           sound.once('unlock', () => {
-            console.log('Unlocked and Playing');
-            sound.play().catch(e => console.warn('Play failed:', e));
+            console.log('✓ Audio Unlocked - Playing Now');
+            sound.play().catch(e => console.error('Play failed:', e));
           });
+        },
+        onplay: () => {
+          console.log(`▶ Playing: ${state} at ${Math.round(volume * 100)}% volume`);
         },
       });
 
