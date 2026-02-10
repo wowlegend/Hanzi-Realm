@@ -55,7 +55,10 @@ export default function CompanionDisplay({ companion, isHappy = false }: Compani
         </motion.div>
       </div>
       <div className="text-center mt-2 max-w-[100px]">
-        <p className={`text-xs font-bold ${getRarityColor(companion.rarity).split(' ')[0]}`}>
+        <p
+          className={`text-sm font-bold ${getRarityColor(companion.rarity).split(' ')[0]}`}
+          style={{ textShadow: 'none' }}
+        >
           {companion.name}
         </p>
         <p className="text-[10px] text-green-400 mt-0.5 leading-tight">

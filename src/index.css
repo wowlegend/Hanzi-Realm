@@ -5,7 +5,7 @@
 @layer base {
   body {
     font-family: 'ZCOOL KuaiLe', cursive;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -65,7 +65,7 @@
   }
 
   .voxel-card h2, .voxel-card p, .modal-content h2, .modal-content p {
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   }
 
   select, input {
