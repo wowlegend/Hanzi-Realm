@@ -99,12 +99,16 @@ export interface GameState {
   wordsLearned: Set<string>;
   gradeLevel: number;
   worldNumber: number;
-  seenQuestionIds: Set<number>;
+  seenQuestionIds: Set<number | string>;
   gameMode: GameMode;
   streakShieldActive: boolean;
   streakShieldUsed: boolean;
   fireMode: boolean;
   currentNodeId: string | null;
+  nodeQuestionsTotal: number;
+  nodeQuestionsAnswered: number;
+  bossHp: number;
+  bossMaxHp: number;
 }
 
 export interface WorldMapState {
@@ -113,16 +117,14 @@ export interface WorldMapState {
 }
 
 export interface PlayerInventory {
-  theme: 'meadow' | 'magma' | 'cyber';
+  theme: string;
   activeCompanion: string | null;
   companions: Companion[];
 }
 
 export interface GameSettings {
-  elevenLabsApiKey: string;
   audioLanguage: 'zh-CN' | 'zh-HK';
-  useElevenLabs: boolean;
-  voiceId: string;
+  useAzureTts: boolean;
   gradeLevel: number;
   audioSpeed: number;
   bgmVolume: number;

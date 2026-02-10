@@ -1,4 +1,3 @@
-import { GameSettings } from '../types';
 import { AUDIO_DEFAULTS } from './constants';
 
 const audioCache = new Map<string, string>();
@@ -11,7 +10,6 @@ export const setDebugCallback = (callback: (message: string, isError: boolean) =
 
 export const clearAudioCache = () => {
   audioCache.clear();
-  console.log('Audio cache cleared');
 };
 
 export const speakChinese = async (
@@ -22,9 +20,6 @@ export const speakChinese = async (
   fallbackLanguage: string = 'zh-CN',
   audioSpeed: number = 1.0
 ): Promise<void> => {
-  console.log('Azure Region:', explicitRegion);
-  console.log('API Key (first 10 chars):', explicitApiKey.substring(0, 10));
-
   if (useAzure && explicitApiKey) {
     if (debugCallback) {
       debugCallback(`Fetching Azure TTS audio...`, false);
@@ -35,9 +30,8 @@ export const speakChinese = async (
       console.error('Azure TTS error:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (debugCallback) {
-        debugCallback(`ERROR: ${errorMessage}`, true);
+        debugCallback(`Azure TTS Error: ${errorMessage}`, true);
       }
-      alert(`Azure TTS Error:\n\n${errorMessage}\n\nPlease check your API key and region settings.`);
       speakWithFallback(text, fallbackLanguage, audioSpeed);
     }
   } else {
@@ -46,25 +40,19 @@ export const speakChinese = async (
 };
 
 const speakWithAzure = async (text: string, apiKey: string, region: string, audioSpeed: number = 1.0): Promise<void> => {
-  // Use constants as fallbacks for zero-config experience
   const finalApiKey = apiKey || localStorage.getItem('azure_key') || AUDIO_DEFAULTS.KEY;
   const finalRegion = region || localStorage.getItem('azure_region') || AUDIO_DEFAULTS.REGION;
 
-  // Clean text: remove spaces and underscores
   const cleanText = text
     .replace(/_/g, '')
     .replace(/\{[^}]+\}/g, '')
     .replace(/\s+/g, '')
     .trim();
 
-  const textToPlay = cleanText.endsWith('。') ? cleanText : cleanText + '。';
+  const textToPlay = cleanText.endsWith('\u3002') ? cleanText : cleanText + '\u3002';
   const selectedVoice = localStorage.getItem('azureVoice') || AUDIO_DEFAULTS.VOICE;
   const voiceGender = selectedVoice.includes('Xiaoxiao') ? 'Female' : 'Male';
   const cacheKey = `${textToPlay}_azure_${selectedVoice}`;
-
-  console.log('📝 Original:', text);
-  console.log('🔊 Sending to Azure:', textToPlay);
-  console.log('🎙️ Selected Voice:', selectedVoice);
 
   if (audioCache.has(cacheKey)) {
     const audioUrl = audioCache.get(cacheKey)!;
@@ -72,22 +60,16 @@ const speakWithAzure = async (text: string, apiKey: string, region: string, audi
     audio.playbackRate = audioSpeed;
     audio.play();
     if (debugCallback) {
-      debugCallback(`Success: Playing cached audio`, false);
+      debugCallback(`Playing cached audio`, false);
     }
-    console.log('Playing cached Azure audio');
     return;
   }
 
-  // Construct SSML for Azure
   const ssml = `<speak version='1.0' xml:lang='zh-CN'>
   <voice xml:lang='zh-CN' xml:gender='${voiceGender}' name='${selectedVoice}'>
     ${textToPlay}
   </voice>
 </speak>`;
-
-  console.log('🔊 SSML:', ssml);
-  console.log('🔑 Using API Key:', finalApiKey.substring(0, 10));
-  console.log('🌏 Using Region:', finalRegion);
 
   const url = `https://${finalRegion}.tts.speech.microsoft.com/cognitiveservices/v1`;
 
@@ -104,8 +86,9 @@ const speakWithAzure = async (text: string, apiKey: string, region: string, audi
 
   if (!response.ok) {
     const errorText = await response.text();
-    const errorMessage = `Status ${response.status}: ${errorText}`;
-    console.error('Azure TTS API Error:', errorMessage);
+    const errorMessage = response.status === 401
+      ? 'Azure API key is invalid or expired. Check your configuration.'
+      : `Status ${response.status}: ${errorText}`;
     if (debugCallback) {
       debugCallback(errorMessage, true);
     }
@@ -121,9 +104,8 @@ const speakWithAzure = async (text: string, apiKey: string, region: string, audi
   audio.play();
 
   if (debugCallback) {
-    debugCallback(`Success: Fetched Azure audio (${blob.size} bytes)`, false);
+    debugCallback(`Azure audio ready (${blob.size} bytes)`, false);
   }
-  console.log('Successfully fetched new Azure audio');
 };
 
 const speakWithFallback = (text: string, language: string, audioSpeed: number = 1.0): void => {

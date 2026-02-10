@@ -1,4 +1,4 @@
-import { Level, PinyinChar, ContentBlock, AnswerOption } from '../types';
+import { Level, PinyinChar, ContentBlock } from '../types';
 
 function createPinyinSegments(chars: string[], pinyins: string[], missingIndex?: number): PinyinChar[] {
   return chars.map((char, i) => ({

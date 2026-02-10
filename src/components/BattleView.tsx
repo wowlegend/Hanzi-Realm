@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Volume2, Settings as SettingsIcon, Loader, Gift, Trophy, Map, Zap, Lightbulb } from 'lucide-react';
 import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats, MusicState, AnswerOption } from '../types';
@@ -109,9 +109,14 @@ export default function BattleView({
   getJadeBonus,
 }: BattleViewProps) {
   const [hoveredOption, setHoveredOption] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  const progressPercentage = ((gameState.currentLevelIndex + 1) / levels.length) * 100;
+  const isInNode = !!gameState.currentNodeId;
+  const nodeProgress = isInNode ? gameState.nodeQuestionsAnswered : 0;
+  const nodeTotal = isInNode ? gameState.nodeQuestionsTotal : 0;
+  const progressPercentage = isInNode
+    ? (nodeProgress / nodeTotal) * 100
+    : ((gameState.currentLevelIndex + 1) / levels.length) * 100;
+  const hasMoreNodeQuestions = isInNode && nodeProgress < nodeTotal;
   const selectedOption = currentLevel?.options.find(o => o.value === gameState.selectedOption);
 
   return (
@@ -120,15 +125,16 @@ export default function BattleView({
       <MusicManager state={musicState} volume={settings.bgmVolume} enabled={bgmEnabled} />
 
       <div
-        ref={containerRef}
         className="relative min-h-screen flex flex-col items-center justify-center p-4 sm:p-6"
       >
         {currentBoss && (
           <BossBattle
             boss={currentBoss}
             timeLeft={bossTimer}
-            maxTime={15}
+            maxTime={45}
             isActive={isBossMode}
+            bossHp={gameState.bossHp}
+            bossMaxHp={gameState.bossMaxHp}
           />
         )}
 
@@ -398,7 +404,7 @@ export default function BattleView({
                 </p>
                 {gameState.isCorrect && (
                   <p className="text-[#ffd700] font-black mt-2 text-2xl">
-                    +{Math.floor((isBossMode ? 500 : 100) * (1 + getJadeBonus() / 100))} Jade
+                    +{Math.floor((isBossMode ? 800 : 100) * (1 + getJadeBonus() / 100))} Jade
                     {getJadeBonus() > 0 && <span className="text-sm ml-2">(+{getJadeBonus()}% bonus)</span>}
                   </p>
                 )}
@@ -414,7 +420,7 @@ export default function BattleView({
                 whileTap={{ scale: 0.95 }}
                 className="btn-3d-green w-full text-white font-black py-4 sm:py-5 px-6 rounded-2xl text-lg sm:text-xl shadow-lg"
               >
-                {gameState.currentNodeId ? 'Back to Map' : gameState.currentLevelIndex < levels.length - 1 ? 'Next Challenge' : 'New Adventure'}
+                {hasMoreNodeQuestions ? 'Next Question' : isInNode ? 'Back to Map' : gameState.currentLevelIndex < levels.length - 1 ? 'Next Challenge' : 'New Adventure'}
               </motion.button>
             )}
 
@@ -442,7 +448,10 @@ export default function BattleView({
             />
           </div>
           <p className="text-center text-white drop-shadow text-sm sm:text-base mt-2 font-bold">
-            Challenge {gameState.currentLevelIndex + 1} of {levels.length}
+            {isInNode
+              ? `Question ${nodeProgress} of ${nodeTotal}`
+              : `Challenge ${gameState.currentLevelIndex + 1} of ${levels.length}`
+            }
           </p>
         </motion.div>
 

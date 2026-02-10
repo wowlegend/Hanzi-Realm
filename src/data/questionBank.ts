@@ -1,5 +1,6 @@
 import { Level } from '../types';
 import { getLevelsForGrade, getFullSentenceFromLevel } from './beijingCurriculum';
+import { generateSemanticLevels } from './semanticGenerator';
 import {
   getEligibleQuestions,
   selectQuestionsWithSpacedRepetition,
@@ -26,7 +27,9 @@ export function generateLevel(
   count: number,
   seenIds: Set<number | string>
 ): Level[] {
-  const allLevels = getLevelsForGrade(grade);
+  const handcrafted = getLevelsForGrade(grade);
+  const semantic = grade >= 3 ? generateSemanticLevels(grade, 20) : [];
+  const allLevels = [...handcrafted, ...semantic];
 
   const recentIds = sessionTracker.getRecentIds();
   const combinedExclusions = new Set([...seenIds, ...recentIds]);
@@ -115,7 +118,7 @@ export function getCorrectAnswerFromLevel(level: Level): string {
 }
 
 export function getMissingCharDisplay(
-  level: Level,
+  _level: Level,
   showAnswer: boolean,
   selectedAnswer?: string
 ): string {

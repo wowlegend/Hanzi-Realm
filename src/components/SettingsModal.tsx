@@ -29,7 +29,7 @@ export default function SettingsModal({
     return localStorage.getItem('azureVoice') || AUDIO_DEFAULTS.VOICE;
   });
   const [language, setLanguage] = useState(settings.audioLanguage);
-  const [useAzure, setUseAzure] = useState(settings.useElevenLabs);
+  const [useAzure, setUseAzure] = useState(settings.useAzureTts);
   const [gradeLevel, setGradeLevel] = useState(settings.gradeLevel || 1);
   const [audioSpeed, setAudioSpeed] = useState(settings.audioSpeed || 0.75);
   const [showToast, setShowToast] = useState(false);
@@ -43,7 +43,7 @@ export default function SettingsModal({
 
   useEffect(() => {
     setLanguage(settings.audioLanguage);
-    setUseAzure(settings.useElevenLabs);
+    setUseAzure(settings.useAzureTts);
     setGradeLevel(settings.gradeLevel || 1);
     setAudioSpeed(settings.audioSpeed || 0.75);
   }, [settings]);
@@ -55,17 +55,6 @@ export default function SettingsModal({
     { id: 'diamond', name: 'Diamond', colors: 'bg-gradient-to-br from-[#4db8ff] to-[#ffffff]' },
   ];
 
-  const pets = [
-    { id: 'none', name: 'None', emoji: '✓' },
-    { id: 'doge', name: 'Doge', emoji: '🐕' },
-    { id: 'dragon', name: 'Dragon', emoji: '🐉' },
-  ];
-
-  const petPrices: Record<string, number> = {
-    'doge': 500,
-    'dragon': 1000,
-  };
-
   const themePrices: Record<string, number> = {
     'hacker': 300,
     'lava': 300,
@@ -74,10 +63,8 @@ export default function SettingsModal({
 
   const handleSaveSettings = () => {
     onSettingsChange({
-      elevenLabsApiKey: '',
       audioLanguage: language as 'zh-CN' | 'zh-HK',
-      useElevenLabs: useAzure,
-      voiceId: '',
+      useAzureTts: useAzure,
       gradeLevel,
       audioSpeed,
       bgmVolume: settings.bgmVolume ?? 0.1,
@@ -96,7 +83,6 @@ export default function SettingsModal({
 
   const handleTestAudio = async () => {
     if (!AUDIO_DEFAULTS.KEY) {
-      alert('Azure API Key not configured');
       return;
     }
     setIsTestingAudio(true);
@@ -112,14 +98,7 @@ export default function SettingsModal({
   const handleBuyTheme = (themeId: string) => {
     const price = themePrices[themeId] || 0;
     if (hanziCoins >= price) {
-      onInventoryChange({ ...inventory, theme: themeId as any });
-    }
-  };
-
-  const handleBuyPet = (petId: string) => {
-    const price = petPrices[petId] || 0;
-    if (hanziCoins >= price) {
-      onInventoryChange({ ...inventory, pet: petId as any });
+      onInventoryChange({ ...inventory, theme: themeId });
     }
   };
 
@@ -155,7 +134,7 @@ export default function SettingsModal({
 
             <div className="p-6 space-y-6">
               <div className="border border-white/10 bg-black/20 rounded-2xl p-4">
-                <p className="text-[#ffd700] text-lg font-bold">Balance: {hanziCoins} HC</p>
+                <p className="text-[#ffd700] text-lg font-bold">Balance: {hanziCoins} Jade</p>
               </div>
 
               <div>
@@ -230,7 +209,7 @@ export default function SettingsModal({
                     <label className="block text-gray-300 text-sm mb-2">Language</label>
                     <select
                       value={language}
-                      onChange={(e) => setLanguage(e.target.value as any)}
+                      onChange={(e) => setLanguage(e.target.value as 'zh-CN' | 'zh-HK')}
                       className="w-full border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#00b06f]"
                     >
                       <option value="zh-CN">Mandarin (Mainland)</option>
@@ -256,7 +235,6 @@ export default function SettingsModal({
                       <span>0.75x (Perfect for Learning)</span>
                       <span>1.0x (Normal)</span>
                     </div>
-                    <p className="text-gray-500 text-xs mt-2">Adjust the speaking speed for better comprehension</p>
                   </div>
 
                   <div>
@@ -283,7 +261,6 @@ export default function SettingsModal({
                       <span>50%</span>
                       <span>100% (Max)</span>
                     </div>
-                    <p className="text-gray-500 text-xs mt-2">Control background music volume</p>
                   </div>
 
                   <button
@@ -319,37 +296,7 @@ export default function SettingsModal({
                       <p className="text-white font-bold text-sm mb-2">{theme.name}</p>
                       {theme.id !== 'default' && (
                         <p className="text-gray-300 text-xs">
-                          {inventory.theme === theme.id ? 'Owned' : `${themePrices[theme.id]} HC`}
-                        </p>
-                      )}
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-white text-xl font-bold mb-4">Pets</h3>
-                <div className="grid grid-cols-3 gap-3">
-                  {pets.map((pet) => (
-                    <motion.button
-                      key={pet.id}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => pet.id !== 'none' && handleBuyPet(pet.id)}
-                      disabled={hanziCoins < (petPrices[pet.id] || 0) && pet.id !== 'none'}
-                      className={`
-                        p-4 rounded-xl border-2 transition-all hover:bg-white/5
-                        ${inventory.pet === pet.id
-                          ? 'border-[#ffd700] ring-2 ring-[#ffd700]'
-                          : 'border-gray-600'
-                        }
-                      `}
-                    >
-                      <p className="text-3xl mb-2">{pet.emoji}</p>
-                      <p className="text-white font-bold text-sm mb-2">{pet.name}</p>
-                      {pet.id !== 'none' && (
-                        <p className="text-gray-300 text-xs">
-                          {inventory.pet === pet.id ? 'Owned' : `${petPrices[pet.id]} HC`}
+                          {inventory.theme === theme.id ? 'Owned' : `${themePrices[theme.id]} Jade`}
                         </p>
                       )}
                     </motion.button>

@@ -15,21 +15,38 @@ const TRACKS: Record<MusicState, string> = {
   boss: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ready%20Aim%20Fire.mp3',
 };
 
+const preloadedTracks = new Map<MusicState, Howl>();
+
+function preloadTrack(state: MusicState): void {
+  if (preloadedTracks.has(state)) return;
+
+  const sound = new Howl({
+    src: [TRACKS[state]],
+    html5: true,
+    loop: true,
+    volume: 0,
+    preload: true,
+  });
+
+  preloadedTracks.set(state, sound);
+}
+
 export default function MusicManager({ state, volume, enabled }: MusicManagerProps) {
   const howlRef = useRef<Howl | null>(null);
+  const currentStateRef = useRef<MusicState | null>(null);
 
   useEffect(() => {
     const unlockAudio = () => {
       if (Howler.ctx && Howler.ctx.state === 'suspended') {
-        Howler.ctx.resume().then(() => {
-          console.log('AudioContext Resumed by User Interaction');
-        });
+        Howler.ctx.resume();
       }
     };
 
     document.addEventListener('click', unlockAudio);
     document.addEventListener('touchstart', unlockAudio);
     document.addEventListener('keydown', unlockAudio);
+
+    (['battle', 'boss'] as MusicState[]).forEach(preloadTrack);
 
     return () => {
       document.removeEventListener('click', unlockAudio);
@@ -39,57 +56,53 @@ export default function MusicManager({ state, volume, enabled }: MusicManagerPro
   }, []);
 
   useEffect(() => {
-    if (howlRef.current) {
-      howlRef.current.stop();
-      howlRef.current.unload();
-    }
-
-    if (!enabled) {
-      console.log('Music Disabled');
+    if (currentStateRef.current === state && howlRef.current && enabled) {
       return;
     }
 
-    console.log(`Attempting to play: ${state}`);
-    const url = TRACKS[state];
+    if (howlRef.current) {
+      howlRef.current.stop();
+      howlRef.current.unload();
+      howlRef.current = null;
+    }
+
+    currentStateRef.current = state;
+
+    if (!enabled) return;
 
     try {
-      const sound = new Howl({
-        src: [url],
+      const cached = preloadedTracks.get(state);
+      const sound = cached || new Howl({
+        src: [TRACKS[state]],
         html5: true,
         loop: true,
         volume: volume,
         autoplay: true,
-        onload: () => {
-          console.log(`✓ BGM Loaded Successfully: ${state}`);
-        },
-        onloaderror: (id, err) => {
-          console.error(`✗ BGM Load Failed for ${state}:`, err);
-          console.error(`URL attempted: ${url}`);
-        },
-        onplayerror: (id, err) => {
-          console.warn(`⚠ Autoplay Blocked (need user interaction):`, err);
+        onplayerror: () => {
           sound.once('unlock', () => {
-            console.log('✓ Audio Unlocked - Playing Now');
-            sound.play().catch(e => console.error('Play failed:', e));
+            sound.play();
           });
         },
-        onplay: () => {
-          console.log(`▶ Playing: ${state} at ${Math.round(volume * 100)}% volume`);
-        },
       });
+
+      if (cached) {
+        cached.volume(volume);
+        cached.play();
+      }
 
       howlRef.current = sound;
 
       return () => {
         try {
           sound.stop();
-          sound.unload();
-        } catch (e) {
-          console.warn('Error cleaning up audio:', e);
+          if (!preloadedTracks.has(state)) {
+            sound.unload();
+          }
+        } catch {
+          // cleanup errors are non-critical
         }
       };
-    } catch (error) {
-      console.warn('Error initializing background music:', error);
+    } catch {
       return;
     }
   }, [state, enabled]);

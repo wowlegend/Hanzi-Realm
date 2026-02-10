@@ -26,7 +26,6 @@ export default function GachaModal({ isOpen, onClose, jade, onRoll }: GachaModal
 
     setTimeout(() => {
       const random = Math.random() * 100;
-      let cumulativeChance = 0;
       let selectedRarity = 'common';
 
       if (random < getRarityChance('legendary')) {

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { MapNode, NodeType } from '../types';
 import { getNodeIcon, getNodeColor, generatePathPoints } from '../utils/mapGenerator';
+import { getBossForWorld, getWorldTheme } from '../data/bosses';
 
 interface WorldMapProps {
   nodes: MapNode[];
@@ -11,6 +12,8 @@ interface WorldMapProps {
 
 export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: WorldMapProps) {
   const pathD = generatePathPoints(nodes);
+  const theme = getWorldTheme(worldNumber);
+  const boss = getBossForWorld(worldNumber);
 
   const getNodeLabel = (type: NodeType): string => {
     switch (type) {
@@ -28,9 +31,9 @@ export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: Wor
         <div className="flex flex-col gap-3">
           <div>
             <h1 className="text-3xl sm:text-4xl font-black text-white drop-shadow-lg">
-              The Jade Road
+              {theme.name}
             </h1>
-            <p className="text-white/80 text-sm sm:text-base">World {worldNumber}</p>
+            <p className="text-white/60 text-sm sm:text-base">World {worldNumber} - {theme.subtitle}</p>
           </div>
           <div className="voxel-card glass-yellow px-4 py-2 sm:px-6 sm:py-3 w-fit">
             <p className="text-white text-lg font-black drop-shadow">
@@ -38,7 +41,25 @@ export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: Wor
             </p>
           </div>
         </div>
-        <div className="w-32 sm:w-40" />
+
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center gap-3 bg-black/40 backdrop-blur-sm px-4 py-3 rounded-2xl border border-white/10"
+        >
+          <motion.span
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="text-3xl sm:text-4xl"
+            style={{ color: boss.color, textShadow: `0 0 20px ${boss.color}` }}
+          >
+            {boss.character}
+          </motion.span>
+          <div className="text-right">
+            <p className="text-white font-bold text-sm">{boss.name}</p>
+            <p className="text-white/50 text-xs">{boss.chineseName}</p>
+          </div>
+        </motion.div>
       </div>
 
       <div className="flex-1 relative overflow-hidden">
@@ -49,8 +70,8 @@ export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: Wor
         >
           <defs>
             <linearGradient id="pathGradient" x1="0%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stopColor="#00b06f" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#ffd700" stopOpacity="0.8" />
+              <stop offset="0%" stopColor={theme.colors.secondary} stopOpacity="0.8" />
+              <stop offset="100%" stopColor={theme.colors.accent} stopOpacity="0.8" />
             </linearGradient>
           </defs>
 
@@ -85,7 +106,7 @@ export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: Wor
               key={node.id}
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: index * 0.1, type: 'spring', stiffness: 200 }}
+              transition={{ delay: index * 0.08, type: 'spring', stiffness: 200 }}
               onClick={() => node.status === 'unlocked' && onNodeSelect(node)}
               disabled={node.status === 'locked'}
               className={`
@@ -110,14 +131,14 @@ export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: Wor
                 `}
               >
                 {node.status === 'locked' ? (
-                  <span className="text-gray-400">?</span>
+                  <span className="text-gray-400 text-lg">?</span>
                 ) : (
                   <span>{getNodeIcon(node.type)}</span>
                 )}
 
                 {node.status === 'completed' && (
                   <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs">OK</span>
+                    <span className="text-white text-xs font-bold">OK</span>
                   </div>
                 )}
 
@@ -152,7 +173,7 @@ export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: Wor
             <span className="text-white text-xs">Battle</span>
           </div>
           <div className="flex items-center gap-2 bg-black/40 px-3 py-2 rounded-lg">
-            <div className="w-4 h-4 rounded bg-purple-600 border border-purple-400" />
+            <div className="w-4 h-4 rounded bg-teal-600 border border-teal-400" />
             <span className="text-white text-xs">Listening</span>
           </div>
           <div className="flex items-center gap-2 bg-black/40 px-3 py-2 rounded-lg">

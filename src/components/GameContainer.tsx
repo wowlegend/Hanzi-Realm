@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import confetti from 'canvas-confetti';
-import { generateLevel, getLevelFullSentence, getCorrectAnswerFromLevel, markQuestionAnswered } from '../data/questionBank';
+import { generateLevel, getLevelFullSentence, getCorrectAnswerFromLevel, markQuestionAnswered, resetSessionTracker } from '../data/questionBank';
 import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats, MapNode, MusicState, LootReward, AnswerOption } from '../types';
 import { saveProgress, loadProgress, saveInventory, loadInventory, saveSettings, loadSettings, addWordLearned, saveMapState, loadMapState } from '../utils/storage';
 import { syncProgressToCloud, syncCompanionsToCloud, syncMapStateToCloud, recordCharacterAttempt, loadProgressFromCloud, loadCompanionsFromCloud, loadSettingsFromCloud, loadMapStateFromCloud } from '../utils/cloudStorage';
@@ -35,20 +35,22 @@ const DEFAULT_GAME_STATE: GameState = {
   streakShieldUsed: false,
   fireMode: false,
   currentNodeId: null,
+  nodeQuestionsTotal: 0,
+  nodeQuestionsAnswered: 0,
+  bossHp: 0,
+  bossMaxHp: 0,
 };
 
 const DEFAULT_SETTINGS: GameSettings = {
-  elevenLabsApiKey: '',
   audioLanguage: 'zh-CN',
-  useElevenLabs: true,
-  voiceId: 'WuLq5z7nEcrhppO0ZQJw',
+  useAzureTts: true,
   gradeLevel: 1,
   audioSpeed: 0.75,
   bgmVolume: 0.1,
 };
 
 const DEFAULT_INVENTORY: PlayerInventory = {
-  theme: 'meadow',
+  theme: 'default',
   activeCompanion: null,
   companions: [],
 };
@@ -170,7 +172,6 @@ export default function GameContainer() {
     const sett = loadSettings();
     const savedMap = loadMapState();
 
-    const apiKey = localStorage.getItem('elevenlabs_key') || sett.elevenLabsApiKey;
     const gradeToUse = sett.gradeLevel || 1;
     const seenIds = new Set<number | string>();
     const levelsForGrade = generateLevel(gradeToUse, 10, seenIds);
@@ -193,7 +194,7 @@ export default function GameContainer() {
     }));
 
     setInventory(inv);
-    setSettings({ ...sett, elevenLabsApiKey: apiKey, gradeLevel: gradeToUse, audioSpeed: sett.audioSpeed || 0.75, bgmVolume: sett.bgmVolume ?? 0.1 });
+    setSettings({ ...sett, gradeLevel: gradeToUse, audioSpeed: sett.audioSpeed || 0.75, bgmVolume: sett.bgmVolume ?? 0.1 });
 
     if (savedMap && savedMap.worldId === (progress.worldNumber || 1)) {
       setMapNodes(savedMap.nodes);
@@ -209,6 +210,7 @@ export default function GameContainer() {
     try {
       const cloudProgress = await loadProgressFromCloud(user.id);
       if (cloudProgress) {
+        const seenIds = gameState.seenQuestionIds;
         setGameState(prev => ({
           ...prev,
           jade: cloudProgress.jade,
@@ -220,7 +222,7 @@ export default function GameContainer() {
           gradeLevel: cloudProgress.grade_level,
           wordsLearned: new Set(cloudProgress.words_learned),
         }));
-        setLevels(generateLevel(cloudProgress.grade_level, 10, new Set()));
+        setLevels(generateLevel(cloudProgress.grade_level, 10, seenIds));
       }
 
       const cloudCompanions = await loadCompanionsFromCloud(user.id);
@@ -284,16 +286,29 @@ export default function GameContainer() {
 
     const isListeningMode = node.type === 'blind';
     const isBoss = node.type === 'boss';
-    setLevels(generateLevel(settings.gradeLevel, isBoss ? 1 : 5, new Set()));
+    const questionCount = isBoss ? 3 : 5;
+    setLevels(generateLevel(settings.gradeLevel, questionCount, gameState.seenQuestionIds));
     autoSpeakDone.current = false;
     setCharRevealed(false);
     setShowHint(false);
-    setGameState(prev => ({ ...prev, gameMode: isListeningMode ? 'listening' : 'standard', currentNodeId: node.id, currentLevelIndex: 0, selectedOption: null, isCorrect: null, showFeedback: false }));
+    setGameState(prev => ({
+      ...prev,
+      gameMode: isListeningMode ? 'listening' : 'standard',
+      currentNodeId: node.id,
+      currentLevelIndex: 0,
+      selectedOption: null,
+      isCorrect: null,
+      showFeedback: false,
+      nodeQuestionsTotal: questionCount,
+      nodeQuestionsAnswered: 0,
+      bossHp: isBoss ? 3 : 0,
+      bossMaxHp: isBoss ? 3 : 0,
+    }));
 
     if (isBoss) {
       setCurrentBoss(getBossForWorld(gameState.worldNumber));
       setIsBossMode(true);
-      setBossTimer(15);
+      setBossTimer(45);
     }
     setShowMap(false);
   };
@@ -304,7 +319,8 @@ export default function GameContainer() {
     const isCorrect = option.value === correctAnswer;
     if (gameState.gameMode === 'listening') setCharRevealed(true);
 
-    setGameState(prev => ({ ...prev, selectedOption: option.value, isCorrect, showFeedback: true, questionsAnswered: prev.questionsAnswered + 1 }));
+    const newNodeAnswered = gameState.nodeQuestionsAnswered + 1;
+    setGameState(prev => ({ ...prev, selectedOption: option.value, isCorrect, showFeedback: true, questionsAnswered: prev.questionsAnswered + 1, nodeQuestionsAnswered: newNodeAnswered }));
     setSessionStats(prev => ({ ...prev, questionsAnswered: prev.questionsAnswered + 1, correctAnswers: isCorrect ? prev.correctAnswers + 1 : prev.correctAnswers }));
 
     if (isCorrect) {
@@ -319,7 +335,7 @@ export default function GameContainer() {
       }
       addWordLearned(correctAnswer);
 
-      const baseReward = isBossMode ? 500 : 100;
+      const baseReward = isBossMode ? 800 : 100;
       const jadeReward = Math.floor(baseReward * (1 + getJadeBonus() / 100));
       const streakIncrement = Math.ceil(getComboMultiplier());
       if (gameState.currentStreak + streakIncrement >= 3) sfxManager.play('combo');
@@ -330,14 +346,15 @@ export default function GameContainer() {
       const newStreak = gameState.currentStreak + streakIncrement;
       const newBestStreak = Math.max(newStreak, gameState.bestStreak);
       let newBossesDefeated = gameState.bossesDefeated;
+      const newBossHp = isBossMode ? gameState.bossHp - 1 : 0;
 
-      if (isBossMode) {
+      if (isBossMode && newBossHp <= 0) {
         newBossesDefeated += 1;
         sfxManager.play('boss');
         setSessionStats(prev => ({ ...prev, bossesDefeated: prev.bossesDefeated + 1 }));
       }
 
-      setGameState(prev => ({ ...prev, jade: newJade, currentStreak: newStreak, bestStreak: newBestStreak, bossesDefeated: newBossesDefeated, wordsLearned: newWords }));
+      setGameState(prev => ({ ...prev, jade: newJade, currentStreak: newStreak, bestStreak: newBestStreak, bossesDefeated: newBossesDefeated, wordsLearned: newWords, bossHp: isBossMode ? newBossHp : prev.bossHp }));
       setSessionStats(prev => ({ ...prev, jadeEarned: prev.jadeEarned + jadeReward }));
       syncProgress(newJade, newStreak, newBestStreak, gameState.questionsAnswered + 1, newBossesDefeated, gameState.worldNumber, settings.gradeLevel, Array.from(newWords));
 
@@ -347,7 +364,7 @@ export default function GameContainer() {
       }
       markQuestionAnswered(currentLevel.id);
 
-      if (isBossMode) {
+      if (isBossMode && newBossHp <= 0) {
         if (bossTimerRef.current) { clearInterval(bossTimerRef.current); bossTimerRef.current = null; }
         if (lootBoxTimeoutRef.current) clearTimeout(lootBoxTimeoutRef.current);
         setCurrentBoss(null);
@@ -365,8 +382,8 @@ export default function GameContainer() {
       setGameState(prev => shouldResetStreak ? { ...prev, currentStreak: 0 } : { ...prev, streakShieldUsed: true });
 
       if (isBossMode) {
-        if (bossTimerRef.current) { clearInterval(bossTimerRef.current); bossTimerRef.current = null; }
-        setCurrentBoss(null);
+        const newBossHp = Math.min(gameState.bossHp + 1, gameState.bossMaxHp);
+        setGameState(prev => ({ ...prev, bossHp: newBossHp }));
       }
     }
   };
@@ -377,6 +394,7 @@ export default function GameContainer() {
     setTimeout(() => setShake(false), 500);
     if (bossTimerRef.current) { clearInterval(bossTimerRef.current); bossTimerRef.current = null; }
     setCurrentBoss(null);
+    setIsBossMode(false);
     setGameState(prev => ({ ...prev, currentStreak: 0, selectedOption: null, isCorrect: false, showFeedback: true }));
   };
 
@@ -385,9 +403,19 @@ export default function GameContainer() {
     setShowHint(false);
 
     if (gameState.currentNodeId) {
+      const hasMoreQuestions = nextIndex < levels.length && gameState.nodeQuestionsAnswered < gameState.nodeQuestionsTotal;
+      const isBossDefeated = isBossMode && gameState.bossHp <= 0;
+
+      if (hasMoreQuestions && !isBossDefeated) {
+        autoSpeakDone.current = false;
+        setCharRevealed(false);
+        setGameState(prev => ({ ...prev, currentLevelIndex: nextIndex, selectedOption: null, isCorrect: null, showFeedback: false }));
+        return;
+      }
+
       const currentNode = mapNodes.find(n => n.id === gameState.currentNodeId);
       const isBossNode = currentNode?.type === 'boss';
-      const shouldCompleteNode = !isBossNode || gameState.isCorrect;
+      const shouldCompleteNode = !isBossNode || isBossDefeated || gameState.isCorrect;
 
       const updatedNodes = mapNodes.map(n => {
         if (n.id === gameState.currentNodeId && shouldCompleteNode) return { ...n, status: 'completed' as const };
@@ -407,7 +435,7 @@ export default function GameContainer() {
       else setShowMap(true);
 
       if (isBossNode) setIsBossMode(false);
-      setGameState(prev => ({ ...prev, selectedOption: null, isCorrect: null, showFeedback: false, currentNodeId: null }));
+      setGameState(prev => ({ ...prev, selectedOption: null, isCorrect: null, showFeedback: false, currentNodeId: null, nodeQuestionsTotal: 0, nodeQuestionsAnswered: 0 }));
     } else if (nextIndex >= levels.length) {
       setIsLevelClearedOpen(true);
       setGameState(prev => ({ ...prev, selectedOption: null, isCorrect: null, showFeedback: false }));
@@ -435,9 +463,9 @@ export default function GameContainer() {
     setIsSpeaking(true);
     sfxManager.play('click');
     try {
-      const apiKey = localStorage.getItem('azure_key') || settings.elevenLabsApiKey;
-      const region = localStorage.getItem('azure_region') || settings.voiceId || 'eastasia';
-      await speakChinese(fullSentence, apiKey, region, settings.useElevenLabs, settings.audioLanguage, settings.audioSpeed);
+      const apiKey = localStorage.getItem('azure_key') || AUDIO_DEFAULTS.KEY;
+      const region = localStorage.getItem('azure_region') || AUDIO_DEFAULTS.REGION;
+      await speakChinese(fullSentence, apiKey, region, settings.useAzureTts, settings.audioLanguage, settings.audioSpeed);
     } catch (error) {
       console.error('Speech error:', error);
     } finally {
@@ -453,6 +481,7 @@ export default function GameContainer() {
     saveSettings(updatedSettings);
 
     if (oldGrade !== newGrade) {
+      resetSessionTracker();
       const seenIds = new Set<number | string>();
       setLevels(generateLevel(newGrade, 10, seenIds));
       const newNodes = generateWorldNodes(1);

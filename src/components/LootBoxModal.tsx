@@ -58,8 +58,13 @@ export default function LootBoxModal({ isOpen, onClose, onReward }: LootBoxModal
         const roll = Math.random() * 100;
         let newReward: LootReward;
 
-        if (roll < 5) {
-          const companion = getRandomCompanionByRarity('common');
+        if (roll < 40) {
+          const rarityRoll = Math.random() * 100;
+          let rarity: 'common' | 'rare' | 'legendary';
+          if (rarityRoll < 60) rarity = 'common';
+          else if (rarityRoll < 90) rarity = 'rare';
+          else rarity = 'legendary';
+          const companion = getRandomCompanionByRarity(rarity);
           newReward = { type: 'companion', companion: { ...companion, unlocked: true } };
         } else {
           const jadeAmount = 500 + Math.floor(Math.random() * 500);

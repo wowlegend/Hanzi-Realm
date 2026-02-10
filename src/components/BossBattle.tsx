@@ -2,13 +2,14 @@ import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Zap, Wind, Droplets, Sparkles } from 'lucide-react';
 import { Boss } from '../data/bosses';
-import { sfxManager } from '../utils/sfx';
 
 interface BossBattleProps {
   boss: Boss;
   timeLeft: number;
   maxTime: number;
   isActive: boolean;
+  bossHp?: number;
+  bossMaxHp?: number;
 }
 
 interface AttackEffect {
@@ -18,7 +19,7 @@ interface AttackEffect {
   type: string;
 }
 
-export default function BossBattle({ boss, timeLeft, maxTime, isActive }: BossBattleProps) {
+export default function BossBattle({ boss, timeLeft, maxTime, isActive, bossHp = 3, bossMaxHp = 3 }: BossBattleProps) {
   const percentage = (timeLeft / maxTime) * 100;
   const [bossPosition, setBossPosition] = useState({ x: 50, y: -20 });
   const [isAttacking, setIsAttacking] = useState(false);
@@ -140,16 +141,35 @@ export default function BossBattle({ boss, timeLeft, maxTime, isActive }: BossBa
             </div>
           </div>
 
-          <div className="bg-black/50 rounded-full h-6 overflow-hidden border-2" style={{ borderColor: boss.color }}>
-            <motion.div
-              initial={{ width: '100%' }}
-              animate={{ width: `${percentage}%` }}
-              className="h-full"
-              style={{
-                background: `linear-gradient(90deg, ${boss.color}, ${boss.attackColor})`,
-                transition: 'width 1s linear',
-              }}
-            />
+          <div className="flex gap-3 items-center">
+            <div className="flex-1">
+              <p className="text-white/70 text-xs mb-1">HP</p>
+              <div className="flex gap-1">
+                {Array.from({ length: bossMaxHp }).map((_, i) => (
+                  <motion.div
+                    key={i}
+                    animate={i < bossHp ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+                    transition={{ duration: 0.5, delay: i * 0.1 }}
+                    className={`h-5 flex-1 rounded ${i < bossHp ? '' : 'opacity-30'}`}
+                    style={{ backgroundColor: i < bossHp ? boss.color : '#444' }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex-1">
+              <p className="text-white/70 text-xs mb-1">Time</p>
+              <div className="bg-black/50 rounded-full h-5 overflow-hidden border" style={{ borderColor: boss.color }}>
+                <motion.div
+                  initial={{ width: '100%' }}
+                  animate={{ width: `${percentage}%` }}
+                  className="h-full"
+                  style={{
+                    background: `linear-gradient(90deg, ${boss.color}, ${boss.attackColor})`,
+                    transition: 'width 1s linear',
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </motion.div>

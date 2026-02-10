@@ -77,20 +77,20 @@ export const loadInventory = (): PlayerInventory => {
     try {
       const parsed = JSON.parse(saved);
       return {
-        theme: parsed.theme === 'default' ? 'meadow' : parsed.theme || 'meadow',
+        theme: parsed.theme || 'default',
         activeCompanion: parsed.activeCompanion || null,
         companions: parsed.companions || [],
       };
     } catch {
       return {
-        theme: 'meadow',
+        theme: 'default',
         activeCompanion: null,
         companions: [],
       };
     }
   }
   return {
-    theme: 'meadow',
+    theme: 'default',
     activeCompanion: null,
     companions: [],
   };
@@ -106,10 +106,8 @@ export const loadSettings = (): GameSettings => {
     try {
       const parsed = JSON.parse(saved);
       return {
-        elevenLabsApiKey: parsed.elevenLabsApiKey || '',
         audioLanguage: parsed.audioLanguage || 'zh-CN',
-        useElevenLabs: parsed.useElevenLabs !== undefined ? parsed.useElevenLabs : true,
-        voiceId: parsed.voiceId || 'WuLq5z7nEcrhppO0ZQJw',
+        useAzureTts: parsed.useAzureTts !== undefined ? parsed.useAzureTts : (parsed.useElevenLabs !== undefined ? parsed.useElevenLabs : true),
         gradeLevel: parsed.gradeLevel || 1,
         audioSpeed: parsed.audioSpeed || 0.75,
         bgmVolume: parsed.bgmVolume !== undefined ? parsed.bgmVolume : 0.1,
@@ -122,10 +120,8 @@ export const loadSettings = (): GameSettings => {
 };
 
 const getDefaultSettings = (): GameSettings => ({
-  elevenLabsApiKey: '',
   audioLanguage: 'zh-CN',
-  useElevenLabs: true,
-  voiceId: 'WuLq5z7nEcrhppO0ZQJw',
+  useAzureTts: true,
   gradeLevel: 1,
   audioSpeed: 0.75,
   bgmVolume: 0.1,

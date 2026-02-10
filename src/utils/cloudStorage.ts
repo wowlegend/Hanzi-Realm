@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { PlayerInventory, GameSettings, MapNode, Companion } from '../types';
+import { GameSettings, MapNode, Companion } from '../types';
 
 interface GameProgress {
   jade: number;
@@ -134,14 +134,14 @@ export async function loadCompanionsFromCloud(userId: string): Promise<{ compani
 export async function syncSettingsToCloud(
   userId: string,
   settings: GameSettings,
-  theme: 'meadow' | 'magma' | 'cyber'
+  theme: string
 ): Promise<void> {
   const { error } = await supabase
     .from('game_settings')
     .upsert({
       user_id: userId,
       audio_language: settings.audioLanguage,
-      use_eleven_labs: settings.useElevenLabs,
+      use_eleven_labs: settings.useAzureTts,
       audio_speed: settings.audioSpeed,
       bgm_volume: settings.bgmVolume,
       theme,
@@ -156,7 +156,7 @@ export async function syncSettingsToCloud(
   }
 }
 
-export async function loadSettingsFromCloud(userId: string): Promise<{ settings: Partial<GameSettings>, theme: 'meadow' | 'magma' | 'cyber' } | null> {
+export async function loadSettingsFromCloud(userId: string): Promise<{ settings: Partial<GameSettings>, theme: string } | null> {
   const { data, error } = await supabase
     .from('game_settings')
     .select('*')
@@ -173,11 +173,11 @@ export async function loadSettingsFromCloud(userId: string): Promise<{ settings:
   return {
     settings: {
       audioLanguage: data.audio_language,
-      useElevenLabs: data.use_eleven_labs,
+      useAzureTts: data.use_eleven_labs,
       audioSpeed: data.audio_speed,
       bgmVolume: data.bgm_volume,
     },
-    theme: data.theme as 'meadow' | 'magma' | 'cyber',
+    theme: data.theme || 'default',
   };
 }
 
