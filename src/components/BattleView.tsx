@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Volume2, Settings as SettingsIcon, Loader, Gift, Trophy, Map, Zap, Lightbulb } from 'lucide-react';
 import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats, MusicState, AnswerOption } from '../types';
@@ -109,6 +109,13 @@ export default function BattleView({
   getJadeBonus,
 }: BattleViewProps) {
   const [hoveredOption, setHoveredOption] = useState<string | null>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (gameState.showFeedback && feedbackRef.current) {
+      feedbackRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [gameState.showFeedback]);
 
   const isInNode = !!gameState.currentNodeId;
   const nodeProgress = isInNode ? gameState.nodeQuestionsAnswered : 0;
@@ -267,6 +274,7 @@ export default function BattleView({
               gameState.fireMode ? 'border-orange-500 border-4 shadow-[0_0_30px_rgba(255,165,0,0.4)] p-6 sm:p-8' :
               'border-gray-700 p-6 sm:p-8'
             }`}
+            style={isBossMode ? { position: 'relative', zIndex: 35 } : undefined}
           >
             <div className={isBossMode ? 'mb-3' : 'mb-6'}>
               <div className={`flex items-start gap-4 ${isBossMode ? 'mb-2' : 'mb-4'}`}>
@@ -400,14 +408,14 @@ export default function BattleView({
             </div>
 
             {gameState.showFeedback && (
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
+              <div
+                ref={feedbackRef}
                 className={`rounded-2xl border ${isBossMode ? 'p-3 mb-2' : 'p-4 sm:p-6 mb-4'} ${
                   gameState.isCorrect
                     ? 'bg-green-600/60 border-green-500'
                     : 'bg-red-600/60 border-red-500'
                 }`}
+                style={{ position: 'relative', zIndex: 60 }}
               >
                 <p className="text-lg sm:text-xl font-bold text-white drop-shadow">
                   {gameState.isCorrect ? (
@@ -437,20 +445,17 @@ export default function BattleView({
                     {getJadeBonus() > 0 && <span className="text-sm ml-2">(+{getJadeBonus()}% bonus)</span>}
                   </p>
                 )}
-              </motion.div>
+              </div>
             )}
 
             {gameState.showFeedback && !awaitingLoot && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
+              <button
                 onClick={onNext}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="btn-3d-green w-full text-white font-black py-4 sm:py-5 px-6 rounded-2xl text-lg sm:text-xl shadow-lg"
+                className="btn-3d-green w-full text-white font-black py-4 sm:py-5 px-6 rounded-2xl text-lg sm:text-xl shadow-lg hover:brightness-110 active:translate-y-1 transition-all"
+                style={{ position: 'relative', zIndex: 60 }}
               >
                 {hasMoreNodeQuestions ? 'Next Question' : isInNode ? 'Back to Map' : gameState.currentLevelIndex < levels.length - 1 ? 'Next Challenge' : 'New Adventure'}
-              </motion.button>
+              </button>
             )}
 
             {awaitingLoot && (
