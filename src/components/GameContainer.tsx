@@ -105,8 +105,6 @@ export default function GameContainer() {
   }, []);
 
   useEffect(() => {
-    if (!localStorage.getItem('azure_key')) localStorage.setItem('azure_key', AUDIO_DEFAULTS.KEY);
-    if (!localStorage.getItem('azure_region')) localStorage.setItem('azure_region', AUDIO_DEFAULTS.REGION);
     if (!localStorage.getItem('azureVoice')) localStorage.setItem('azureVoice', AUDIO_DEFAULTS.VOICE);
     loadGameData();
   }, []);
@@ -130,7 +128,7 @@ export default function GameContainer() {
   }, [gameState.currentStreak, gameState.fireMode]);
 
   useEffect(() => {
-    if (isBossMode) {
+    if (isBossMode && !gameState.showFeedback) {
       setMusicState('boss');
       bossTimerRef.current = setInterval(() => {
         setBossTimer(prev => {
@@ -141,18 +139,23 @@ export default function GameContainer() {
           return prev - 1;
         });
       }, 1000);
-    } else {
+    } else if (!isBossMode) {
       if (bossTimerRef.current) {
         clearInterval(bossTimerRef.current);
         bossTimerRef.current = null;
       }
       setBossTimer(15);
+    } else {
+      if (bossTimerRef.current) {
+        clearInterval(bossTimerRef.current);
+        bossTimerRef.current = null;
+      }
     }
     return () => {
       if (bossTimerRef.current) clearInterval(bossTimerRef.current);
       if (lootBoxTimeoutRef.current) clearTimeout(lootBoxTimeoutRef.current);
     };
-  }, [isBossMode]);
+  }, [isBossMode, gameState.showFeedback]);
 
   useEffect(() => {
     if (!showMap && !isBossMode) setMusicState('battle');
@@ -463,9 +466,7 @@ export default function GameContainer() {
     setIsSpeaking(true);
     sfxManager.play('click');
     try {
-      const apiKey = localStorage.getItem('azure_key') || AUDIO_DEFAULTS.KEY;
-      const region = localStorage.getItem('azure_region') || AUDIO_DEFAULTS.REGION;
-      await speakChinese(fullSentence, apiKey, region, settings.useAzureTts, settings.audioLanguage, settings.audioSpeed);
+      await speakChinese(fullSentence, '', '', settings.useAzureTts, settings.audioLanguage, settings.audioSpeed);
     } catch (error) {
       console.error('Speech error:', error);
     } finally {

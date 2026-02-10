@@ -1,5 +1,3 @@
-import { AUDIO_DEFAULTS } from './constants';
-
 const audioCache = new Map<string, string>();
 
 let debugCallback: ((message: string, isError: boolean) => void) | null = null;
@@ -14,23 +12,20 @@ export const clearAudioCache = () => {
 
 export const speakChinese = async (
   text: string,
-  explicitApiKey: string,
-  explicitRegion: string,
-  useAzure: boolean,
+  _apiKey: string,
+  _region: string,
+  useEdgeTts: boolean,
   fallbackLanguage: string = 'zh-CN',
   audioSpeed: number = 1.0
 ): Promise<void> => {
-  if (useAzure && explicitApiKey) {
-    if (debugCallback) {
-      debugCallback(`Fetching Azure TTS audio...`, false);
-    }
+  if (useEdgeTts) {
     try {
-      await speakWithAzure(text, explicitApiKey, explicitRegion, audioSpeed);
+      await speakWithEdgeTts(text, audioSpeed);
     } catch (error) {
-      console.error('Azure TTS error:', error);
+      console.error('Edge TTS error:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (debugCallback) {
-        debugCallback(`Azure TTS Error: ${errorMessage}`, true);
+        debugCallback(`Edge TTS Error: ${errorMessage}. Using browser voice.`, true);
       }
       speakWithFallback(text, fallbackLanguage, audioSpeed);
     }
@@ -39,10 +34,7 @@ export const speakChinese = async (
   }
 };
 
-const speakWithAzure = async (text: string, apiKey: string, region: string, audioSpeed: number = 1.0): Promise<void> => {
-  const finalApiKey = apiKey || localStorage.getItem('azure_key') || AUDIO_DEFAULTS.KEY;
-  const finalRegion = region || localStorage.getItem('azure_region') || AUDIO_DEFAULTS.REGION;
-
+const speakWithEdgeTts = async (text: string, audioSpeed: number = 1.0): Promise<void> => {
   const cleanText = text
     .replace(/_/g, '')
     .replace(/\{[^}]+\}/g, '')
@@ -50,9 +42,8 @@ const speakWithAzure = async (text: string, apiKey: string, region: string, audi
     .trim();
 
   const textToPlay = cleanText.endsWith('\u3002') ? cleanText : cleanText + '\u3002';
-  const selectedVoice = localStorage.getItem('azureVoice') || AUDIO_DEFAULTS.VOICE;
-  const voiceGender = selectedVoice.includes('Xiaoxiao') ? 'Female' : 'Male';
-  const cacheKey = `${textToPlay}_azure_${selectedVoice}`;
+  const selectedVoice = localStorage.getItem('azureVoice') || 'zh-CN-YunxiNeural';
+  const cacheKey = `${textToPlay}_edge_${selectedVoice}`;
 
   if (audioCache.has(cacheKey)) {
     const audioUrl = audioCache.get(cacheKey)!;
@@ -60,42 +51,41 @@ const speakWithAzure = async (text: string, apiKey: string, region: string, audi
     audio.playbackRate = audioSpeed;
     audio.play();
     if (debugCallback) {
-      debugCallback(`Playing cached audio`, false);
+      debugCallback('Playing cached audio', false);
     }
     return;
   }
 
-  const ssml = `<speak version='1.0' xml:lang='zh-CN'>
-  <voice xml:lang='zh-CN' xml:gender='${voiceGender}' name='${selectedVoice}'>
-    ${textToPlay}
-  </voice>
-</speak>`;
+  if (debugCallback) {
+    debugCallback('Fetching Edge TTS audio...', false);
+  }
 
-  const url = `https://${finalRegion}.tts.speech.microsoft.com/cognitiveservices/v1`;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  const response = await fetch(url, {
+  const response = await fetch(`${supabaseUrl}/functions/v1/tts`, {
     method: 'POST',
     headers: {
-      'Ocp-Apim-Subscription-Key': finalApiKey,
-      'Content-Type': 'application/ssml+xml',
-      'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
-      'User-Agent': 'HanziRealm'
+      'Authorization': `Bearer ${supabaseKey}`,
+      'Content-Type': 'application/json',
     },
-    body: ssml,
+    body: JSON.stringify({ text: textToPlay, voice: selectedVoice }),
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    const errorMessage = response.status === 401
-      ? 'Azure API key is invalid or expired. Check your configuration.'
-      : `Status ${response.status}: ${errorText}`;
-    if (debugCallback) {
-      debugCallback(errorMessage, true);
-    }
-    throw new Error(errorMessage);
+    let errorMsg = `Status ${response.status}`;
+    try {
+      const errBody = await response.json();
+      errorMsg = errBody.error || errorMsg;
+    } catch { /* ignore */ }
+    throw new Error(errorMsg);
   }
 
   const blob = await response.blob();
+  if (blob.size === 0) {
+    throw new Error('Empty audio response');
+  }
+
   const audioUrl = URL.createObjectURL(blob);
   audioCache.set(cacheKey, audioUrl);
 
@@ -104,7 +94,7 @@ const speakWithAzure = async (text: string, apiKey: string, region: string, audi
   audio.play();
 
   if (debugCallback) {
-    debugCallback(`Azure audio ready (${blob.size} bytes)`, false);
+    debugCallback(`Edge TTS audio ready (${blob.size} bytes)`, false);
   }
 };
 
@@ -113,10 +103,22 @@ const speakWithFallback = (text: string, language: string, audioSpeed: number = 
     window.speechSynthesis.cancel();
 
     const voices = window.speechSynthesis.getVoices();
-    let selectedVoice = voices.find(v => v.lang.startsWith(language));
 
+    let selectedVoice = voices.find(v =>
+      v.lang.startsWith(language) && (v.name.includes('Neural') || v.name.includes('Microsoft'))
+    );
     if (!selectedVoice) {
-      selectedVoice = voices.find(v => v.name.includes('Google') || v.name.includes('Neural') || v.name.includes('Ting-Ting'));
+      selectedVoice = voices.find(v =>
+        v.lang.startsWith(language) && v.name.includes('Google')
+      );
+    }
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v => v.lang.startsWith(language));
+    }
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v =>
+        v.name.includes('Ting-Ting') || v.name.includes('Chinese')
+      );
     }
 
     const utterance = new SpeechSynthesisUtterance(text);

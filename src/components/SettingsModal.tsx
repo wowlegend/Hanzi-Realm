@@ -25,25 +25,25 @@ export default function SettingsModal({
   onSettingsChange,
   onInventoryChange,
 }: SettingsModalProps) {
-  const [azureVoice, setAzureVoice] = useState(() => {
+  const [voiceChoice, setVoiceChoice] = useState(() => {
     return localStorage.getItem('azureVoice') || AUDIO_DEFAULTS.VOICE;
   });
   const [language, setLanguage] = useState(settings.audioLanguage);
-  const [useAzure, setUseAzure] = useState(settings.useAzureTts);
+  const [useEdgeTts, setUseEdgeTts] = useState(settings.useAzureTts);
   const [gradeLevel, setGradeLevel] = useState(settings.gradeLevel || 1);
   const [audioSpeed, setAudioSpeed] = useState(settings.audioSpeed || 0.75);
   const [showToast, setShowToast] = useState(false);
   const [isTestingAudio, setIsTestingAudio] = useState(false);
 
   useEffect(() => {
-    if (azureVoice) {
-      localStorage.setItem('azureVoice', azureVoice);
+    if (voiceChoice) {
+      localStorage.setItem('azureVoice', voiceChoice);
     }
-  }, [azureVoice]);
+  }, [voiceChoice]);
 
   useEffect(() => {
     setLanguage(settings.audioLanguage);
-    setUseAzure(settings.useAzureTts);
+    setUseEdgeTts(settings.useAzureTts);
     setGradeLevel(settings.gradeLevel || 1);
     setAudioSpeed(settings.audioSpeed || 0.75);
   }, [settings]);
@@ -64,7 +64,7 @@ export default function SettingsModal({
   const handleSaveSettings = () => {
     onSettingsChange({
       audioLanguage: language as 'zh-CN' | 'zh-HK',
-      useAzureTts: useAzure,
+      useAzureTts: useEdgeTts,
       gradeLevel,
       audioSpeed,
       bgmVolume: settings.bgmVolume ?? 0.1,
@@ -76,18 +76,13 @@ export default function SettingsModal({
 
   const handleClearCache = () => {
     clearAudioCache();
-    localStorage.removeItem('azure_key');
-    localStorage.removeItem('azure_region');
     window.location.reload();
   };
 
   const handleTestAudio = async () => {
-    if (!AUDIO_DEFAULTS.KEY) {
-      return;
-    }
     setIsTestingAudio(true);
     try {
-      await speakChinese('你好', AUDIO_DEFAULTS.KEY, AUDIO_DEFAULTS.REGION, useAzure, language, audioSpeed);
+      await speakChinese('你好世界', '', '', useEdgeTts, language, audioSpeed);
     } catch (error) {
       console.error('Test audio error:', error);
     } finally {
@@ -143,47 +138,43 @@ export default function SettingsModal({
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={useAzure}
-                      onChange={(e) => setUseAzure(e.target.checked)}
+                      checked={useEdgeTts}
+                      onChange={(e) => setUseEdgeTts(e.target.checked)}
                       className="w-5 h-5"
                     />
-                    <span className="text-gray-300">Use Azure TTS for Premium Audio</span>
+                    <span className="text-gray-300">Use Neural TTS (High Quality Mandarin)</span>
                   </label>
 
-                  {useAzure && (
+                  {useEdgeTts && (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-gray-300 text-sm mb-2">Voice Gender</label>
+                        <label className="block text-gray-300 text-sm mb-2">Voice</label>
                         <select
-                          value={azureVoice}
-                          onChange={(e) => setAzureVoice(e.target.value)}
+                          value={voiceChoice}
+                          onChange={(e) => setVoiceChoice(e.target.value)}
                           className="w-full border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#00b06f]"
                         >
                           <option value="zh-CN-YunxiNeural">Male (Yunxi)</option>
                           <option value="zh-CN-XiaoxiaoNeural">Female (Xiaoxiao)</option>
                         </select>
-                        <p className="text-gray-500 text-xs mt-2">Choose your preferred narrator voice</p>
+                        <p className="text-gray-500 text-xs mt-2">Microsoft neural voices - free, no API key needed</p>
                       </div>
-                      <div>
+                      <div className="flex gap-2">
                         <button
                           onClick={handleTestAudio}
-                          disabled={isTestingAudio || !AUDIO_DEFAULTS.KEY}
-                          className="w-full bg-[#00b06f] hover:bg-[#00d184] disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                          disabled={isTestingAudio}
+                          className="flex-1 bg-[#00b06f] hover:bg-[#00d184] disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
                         >
                           <Volume2 className="w-5 h-5" />
-                          {isTestingAudio ? 'Testing...' : 'Test Azure Voice'}
+                          {isTestingAudio ? 'Testing...' : 'Test Voice'}
                         </button>
-                        <p className="text-gray-500 text-xs mt-2">Test the selected voice</p>
-                      </div>
-                      <div>
                         <button
                           onClick={handleClearCache}
-                          className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                          className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
                         >
-                          <Trash2 className="w-5 h-5" />
-                          Clear Audio Cache & Reset
+                          <Trash2 className="w-4 h-4" />
+                          Clear Cache
                         </button>
-                        <p className="text-gray-500 text-xs mt-2">Force refresh all cached audio</p>
                       </div>
                     </div>
                   )}

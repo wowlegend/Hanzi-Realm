@@ -28,7 +28,7 @@ export function generateLevel(
   seenIds: Set<number | string>
 ): Level[] {
   const handcrafted = getLevelsForGrade(grade);
-  const semantic = grade >= 3 ? generateSemanticLevels(grade, 20) : [];
+  const semantic = grade >= 2 ? generateSemanticLevels(grade, 20) : [];
   const allLevels = [...handcrafted, ...semantic];
 
   const recentIds = sessionTracker.getRecentIds();

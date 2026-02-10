@@ -125,7 +125,9 @@ export default function BattleView({
       <MusicManager state={musicState} volume={settings.bgmVolume} enabled={bgmEnabled} />
 
       <div
-        className="relative min-h-screen flex flex-col items-center justify-center p-4 sm:p-6"
+        className={`relative min-h-screen flex flex-col items-center p-4 sm:p-6 ${
+          isBossMode ? 'justify-start pt-48' : 'justify-center'
+        }`}
       >
         {currentBoss && (
           <BossBattle
@@ -143,104 +145,131 @@ export default function BattleView({
           transition={{ duration: 0.4 }}
           className="w-full max-w-4xl relative z-10"
         >
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl sm:text-5xl font-black text-white mb-1 tracking-tight drop-shadow-lg">
-                Hanzi Realm
-              </h1>
-              <p className="text-white text-xs sm:text-sm drop-shadow">
-                Grade {settings.gradeLevel} - World {gameState.worldNumber}
-                {gameState.gameMode === 'listening' && ' - Listening Mode'}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <motion.button
-                onClick={onShowMap}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="btn-3d bg-gradient-to-b from-teal-500 to-teal-600 rounded-xl p-3"
-              >
-                <Map className="w-6 h-6 text-white" />
-              </motion.button>
-              <motion.button
-                onClick={onReportOpen}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="btn-3d bg-gradient-to-b from-blue-500 to-blue-600 rounded-xl p-3"
-              >
-                <Trophy className="w-6 h-6 text-white" />
-              </motion.button>
-              <motion.button
-                onClick={onSettingsOpen}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="btn-3d bg-gradient-to-b from-gray-600 to-gray-700 rounded-xl p-3"
-              >
-                <SettingsIcon className="w-6 h-6 text-[#ffd700]" />
-              </motion.button>
-              <UserProfile onLoginClick={onAuthOpen} />
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3 sm:gap-4 mb-6">
-            <div className="voxel-card glass-yellow border-yellow-700 px-4 py-2 sm:px-6 sm:py-3">
-              <p className="text-white text-sm sm:text-base font-black drop-shadow">
-                {gameState.jade} Jade
-              </p>
-            </div>
-            <div className={`voxel-card px-4 py-2 sm:px-6 sm:py-3 relative transition-all duration-300 ${
-              gameState.fireMode ? 'border-orange-500 shadow-[0_0_20px_rgba(255,165,0,0.6)]' : 'border-orange-700'
-            }`}>
-              {gameState.currentStreak >= 3 && (
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 0.5, repeat: Infinity }}
-                  className="absolute -top-3 -right-3 text-3xl"
-                >
-                  {gameState.fireMode ? <Zap className="w-8 h-8 text-yellow-400" /> : '?'}
-                </motion.div>
-              )}
-              <p className={`text-sm sm:text-base font-black drop-shadow ${
-                gameState.currentStreak > 0 ? 'text-white' : 'text-gray-300'
-              }`}>
-                Streak: {gameState.currentStreak}
-                {gameState.fireMode && ' FIRE!'}
-              </p>
-            </div>
-            <div className="voxel-card glass-green border-green-700 px-4 py-2 sm:px-6 sm:py-3">
-              <p className="text-white text-sm sm:text-base font-black drop-shadow">
-                Best: {gameState.bestStreak}
-              </p>
-            </div>
-            {activeCompanion && (
-              <div className="voxel-card border-purple-700 px-4 py-2 sm:px-6 sm:py-3">
-                <p className="text-white text-xs font-bold drop-shadow">
-                  {activeCompanion.emoji} {getBuffDescription(activeCompanion.buffType, activeCompanion.buffValue)}
+          {!isBossMode && (
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl sm:text-5xl font-black text-white mb-1 tracking-tight drop-shadow-lg">
+                  Hanzi Realm
+                </h1>
+                <p className="text-white text-xs sm:text-sm drop-shadow">
+                  Grade {settings.gradeLevel} - World {gameState.worldNumber}
+                  {gameState.gameMode === 'listening' && ' - Listening Mode'}
                 </p>
               </div>
-            )}
-            <motion.button
-              onClick={onGachaOpen}
-              whileHover={{ scale: 1.05, rotate: [0, -5, 5, 0] }}
-              whileTap={{ scale: 0.95 }}
-              className="btn-3d-gold px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center gap-2 text-white font-black"
-            >
-              <Gift className="w-5 h-5" />
-              <span className="text-sm sm:text-base">GACHA</span>
-            </motion.button>
-          </div>
+              <div className="flex gap-2">
+                <motion.button
+                  onClick={onShowMap}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="btn-3d bg-gradient-to-b from-teal-500 to-teal-600 rounded-xl p-3"
+                >
+                  <Map className="w-6 h-6 text-white" />
+                </motion.button>
+                <motion.button
+                  onClick={onReportOpen}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="btn-3d bg-gradient-to-b from-blue-500 to-blue-600 rounded-xl p-3"
+                >
+                  <Trophy className="w-6 h-6 text-white" />
+                </motion.button>
+                <motion.button
+                  onClick={onSettingsOpen}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="btn-3d bg-gradient-to-b from-gray-600 to-gray-700 rounded-xl p-3"
+                >
+                  <SettingsIcon className="w-6 h-6 text-[#ffd700]" />
+                </motion.button>
+                <UserProfile onLoginClick={onAuthOpen} />
+              </div>
+            </div>
+          )}
+
+          {isBossMode && (
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex gap-2">
+                <motion.button
+                  onClick={onShowMap}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="btn-3d bg-gradient-to-b from-teal-500 to-teal-600 rounded-xl p-2"
+                >
+                  <Map className="w-5 h-5 text-white" />
+                </motion.button>
+              </div>
+              <div className="flex gap-2">
+                <div className="voxel-card glass-yellow border-yellow-700 px-3 py-1">
+                  <p className="text-white text-sm font-black drop-shadow">{gameState.jade} Jade</p>
+                </div>
+                <div className="voxel-card px-3 py-1">
+                  <p className="text-white text-sm font-black drop-shadow">Streak: {gameState.currentStreak}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!isBossMode && (
+            <div className="flex flex-wrap gap-3 sm:gap-4 mb-6">
+              <div className="voxel-card glass-yellow border-yellow-700 px-4 py-2 sm:px-6 sm:py-3">
+                <p className="text-white text-sm sm:text-base font-black drop-shadow">
+                  {gameState.jade} Jade
+                </p>
+              </div>
+              <div className={`voxel-card px-4 py-2 sm:px-6 sm:py-3 relative transition-all duration-300 ${
+                gameState.fireMode ? 'border-orange-500 shadow-[0_0_20px_rgba(255,165,0,0.6)]' : 'border-orange-700'
+              }`}>
+                {gameState.currentStreak >= 3 && (
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
+                    transition={{ duration: 0.5, repeat: Infinity }}
+                    className="absolute -top-3 -right-3 text-3xl"
+                  >
+                    {gameState.fireMode ? <Zap className="w-8 h-8 text-yellow-400" /> : '?'}
+                  </motion.div>
+                )}
+                <p className={`text-sm sm:text-base font-black drop-shadow ${
+                  gameState.currentStreak > 0 ? 'text-white' : 'text-gray-300'
+                }`}>
+                  Streak: {gameState.currentStreak}
+                  {gameState.fireMode && ' FIRE!'}
+                </p>
+              </div>
+              <div className="voxel-card glass-green border-green-700 px-4 py-2 sm:px-6 sm:py-3">
+                <p className="text-white text-sm sm:text-base font-black drop-shadow">
+                  Best: {gameState.bestStreak}
+                </p>
+              </div>
+              {activeCompanion && (
+                <div className="voxel-card border-purple-700 px-4 py-2 sm:px-6 sm:py-3">
+                  <p className="text-white text-xs font-bold drop-shadow">
+                    {activeCompanion.emoji} {getBuffDescription(activeCompanion.buffType, activeCompanion.buffValue)}
+                  </p>
+                </div>
+              )}
+              <motion.button
+                onClick={onGachaOpen}
+                whileHover={{ scale: 1.05, rotate: [0, -5, 5, 0] }}
+                whileTap={{ scale: 0.95 }}
+                className="btn-3d-gold px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center gap-2 text-white font-black"
+              >
+                <Gift className="w-5 h-5" />
+                <span className="text-sm sm:text-base">GACHA</span>
+              </motion.button>
+            </div>
+          )}
 
           <motion.div
             animate={shake ? { rotateZ: [-1, 1, -1, 1, 0] } : {}}
             transition={{ duration: 0.4 }}
-            className={`voxel-card rounded-3xl p-6 sm:p-8 mb-6 transition-all duration-300 ${
-              isBossMode ? 'border-red-500 border-8' :
-              gameState.fireMode ? 'border-orange-500 border-4 shadow-[0_0_30px_rgba(255,165,0,0.4)]' :
-              'border-gray-700'
+            className={`voxel-card rounded-3xl mb-4 transition-all duration-300 ${
+              isBossMode ? 'border-red-500 border-4 p-4 sm:p-5' :
+              gameState.fireMode ? 'border-orange-500 border-4 shadow-[0_0_30px_rgba(255,165,0,0.4)] p-6 sm:p-8' :
+              'border-gray-700 p-6 sm:p-8'
             }`}
           >
-            <div className="mb-6">
-              <div className="flex items-start gap-4 mb-4">
+            <div className={isBossMode ? 'mb-3' : 'mb-6'}>
+              <div className={`flex items-start gap-4 ${isBossMode ? 'mb-2' : 'mb-4'}`}>
                 <NarratorAvatar
                   seed={currentLevel.scenario}
                   isSpeaking={isSpeaking}
@@ -321,7 +350,7 @@ export default function BattleView({
               </div>
             </div>
 
-            <div className="space-y-3 sm:space-y-4 mb-6">
+            <div className={`${isBossMode ? 'space-y-2 mb-3' : 'space-y-3 sm:space-y-4 mb-6'}`}>
               {currentLevel.options.map((option) => {
                 const isSelected = gameState.selectedOption === option.value;
                 const isCorrectAnswer = option.value === correctAnswer;
@@ -339,8 +368,8 @@ export default function BattleView({
                     whileHover={!gameState.showFeedback ? { scale: 1.02, rotateX: 5 } : {}}
                     whileTap={!gameState.showFeedback ? { scale: 0.98 } : {}}
                     className={`
-                      w-full rounded-2xl p-4 sm:p-6 font-bold text-xl sm:text-2xl
-                      border-2 transition-all duration-300
+                      w-full rounded-2xl font-bold border-2 transition-all duration-300
+                      ${isBossMode ? 'p-3 text-lg' : 'p-4 sm:p-6 text-xl sm:text-2xl'}
                       ${showAsCorrect ? 'bg-green-600/60 border-green-500 text-white' : ''}
                       ${showAsWrong ? 'bg-red-600/60 border-red-500 text-white' : ''}
                       ${showCorrectHighlight ? 'bg-green-600/60 border-green-500 text-white opacity-60' : ''}
@@ -374,7 +403,7 @@ export default function BattleView({
               <motion.div
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                className={`rounded-2xl p-4 sm:p-6 mb-4 border ${
+                className={`rounded-2xl border ${isBossMode ? 'p-3 mb-2' : 'p-4 sm:p-6 mb-4'} ${
                   gameState.isCorrect
                     ? 'bg-green-600/60 border-green-500'
                     : 'bg-red-600/60 border-red-500'
