@@ -1,88 +1,141 @@
+type NoteConfig = {
+  freq: number;
+  duration: number;
+  startTime: number;
+  type: OscillatorType;
+  gain: number;
+  detune?: number;
+};
+
+type SoundDef = NoteConfig[];
+
+const SOUNDS: Record<string, SoundDef> = {
+  click: [
+    { freq: 1200, duration: 0.04, startTime: 0, type: 'square', gain: 0.15 },
+    { freq: 1800, duration: 0.03, startTime: 0.02, type: 'square', gain: 0.1 },
+  ],
+  correct: [
+    { freq: 523.25, duration: 0.12, startTime: 0, type: 'sine', gain: 0.25 },
+    { freq: 659.25, duration: 0.12, startTime: 0.1, type: 'sine', gain: 0.25 },
+    { freq: 783.99, duration: 0.15, startTime: 0.2, type: 'sine', gain: 0.3 },
+    { freq: 1046.5, duration: 0.25, startTime: 0.3, type: 'sine', gain: 0.2 },
+    { freq: 783.99, duration: 0.1, startTime: 0.3, type: 'triangle', gain: 0.1 },
+  ],
+  wrong: [
+    { freq: 300, duration: 0.15, startTime: 0, type: 'sawtooth', gain: 0.2 },
+    { freq: 250, duration: 0.15, startTime: 0.12, type: 'sawtooth', gain: 0.18 },
+    { freq: 200, duration: 0.25, startTime: 0.24, type: 'sawtooth', gain: 0.15 },
+  ],
+  combo: [
+    { freq: 440, duration: 0.08, startTime: 0, type: 'sine', gain: 0.2 },
+    { freq: 554.37, duration: 0.08, startTime: 0.06, type: 'sine', gain: 0.2 },
+    { freq: 659.25, duration: 0.08, startTime: 0.12, type: 'sine', gain: 0.22 },
+    { freq: 880, duration: 0.15, startTime: 0.18, type: 'sine', gain: 0.25 },
+    { freq: 880, duration: 0.1, startTime: 0.18, type: 'triangle', gain: 0.1, detune: 5 },
+  ],
+  boss: [
+    { freq: 110, duration: 0.3, startTime: 0, type: 'sawtooth', gain: 0.2 },
+    { freq: 146.83, duration: 0.3, startTime: 0.25, type: 'sawtooth', gain: 0.2 },
+    { freq: 174.61, duration: 0.4, startTime: 0.5, type: 'sawtooth', gain: 0.25 },
+    { freq: 220, duration: 0.5, startTime: 0.8, type: 'sawtooth', gain: 0.3 },
+    { freq: 110, duration: 0.3, startTime: 0, type: 'square', gain: 0.08 },
+  ],
+  gacha: [
+    { freq: 392, duration: 0.1, startTime: 0, type: 'sine', gain: 0.2 },
+    { freq: 440, duration: 0.1, startTime: 0.08, type: 'sine', gain: 0.2 },
+    { freq: 523.25, duration: 0.1, startTime: 0.16, type: 'sine', gain: 0.22 },
+    { freq: 587.33, duration: 0.1, startTime: 0.24, type: 'sine', gain: 0.22 },
+    { freq: 659.25, duration: 0.12, startTime: 0.32, type: 'sine', gain: 0.24 },
+    { freq: 783.99, duration: 0.15, startTime: 0.4, type: 'sine', gain: 0.26 },
+    { freq: 1046.5, duration: 0.35, startTime: 0.5, type: 'sine', gain: 0.3 },
+    { freq: 783.99, duration: 0.2, startTime: 0.5, type: 'triangle', gain: 0.1 },
+  ],
+  purchase: [
+    { freq: 1046.5, duration: 0.06, startTime: 0, type: 'square', gain: 0.15 },
+    { freq: 1318.51, duration: 0.06, startTime: 0.05, type: 'square', gain: 0.15 },
+    { freq: 1567.98, duration: 0.1, startTime: 0.1, type: 'square', gain: 0.18 },
+  ],
+  streak5: [
+    { freq: 523.25, duration: 0.1, startTime: 0, type: 'sine', gain: 0.2 },
+    { freq: 659.25, duration: 0.1, startTime: 0.08, type: 'sine', gain: 0.22 },
+    { freq: 783.99, duration: 0.1, startTime: 0.16, type: 'sine', gain: 0.24 },
+    { freq: 1046.5, duration: 0.3, startTime: 0.24, type: 'sine', gain: 0.3 },
+    { freq: 1046.5, duration: 0.3, startTime: 0.24, type: 'triangle', gain: 0.12, detune: 3 },
+  ],
+  streak10: [
+    { freq: 523.25, duration: 0.08, startTime: 0, type: 'sine', gain: 0.2 },
+    { freq: 659.25, duration: 0.08, startTime: 0.06, type: 'sine', gain: 0.22 },
+    { freq: 783.99, duration: 0.08, startTime: 0.12, type: 'sine', gain: 0.24 },
+    { freq: 1046.5, duration: 0.08, startTime: 0.18, type: 'sine', gain: 0.26 },
+    { freq: 1318.51, duration: 0.1, startTime: 0.24, type: 'sine', gain: 0.28 },
+    { freq: 1567.98, duration: 0.4, startTime: 0.32, type: 'sine', gain: 0.3 },
+    { freq: 1046.5, duration: 0.3, startTime: 0.32, type: 'triangle', gain: 0.12 },
+    { freq: 1567.98, duration: 0.3, startTime: 0.32, type: 'square', gain: 0.06, detune: 7 },
+  ],
+  levelup: [
+    { freq: 392, duration: 0.15, startTime: 0, type: 'sine', gain: 0.2 },
+    { freq: 523.25, duration: 0.15, startTime: 0.12, type: 'sine', gain: 0.22 },
+    { freq: 659.25, duration: 0.15, startTime: 0.24, type: 'sine', gain: 0.24 },
+    { freq: 783.99, duration: 0.15, startTime: 0.36, type: 'sine', gain: 0.26 },
+    { freq: 1046.5, duration: 0.5, startTime: 0.48, type: 'sine', gain: 0.3 },
+    { freq: 523.25, duration: 0.3, startTime: 0.48, type: 'triangle', gain: 0.15 },
+  ],
+  jade: [
+    { freq: 1200, duration: 0.06, startTime: 0, type: 'sine', gain: 0.15 },
+    { freq: 1500, duration: 0.08, startTime: 0.04, type: 'sine', gain: 0.18 },
+    { freq: 1800, duration: 0.1, startTime: 0.08, type: 'sine', gain: 0.12 },
+  ],
+};
+
 class SFXManager {
-  private sounds: Map<string, HTMLAudioElement> = new Map();
-  private enabled: boolean = true;
+  private ctx: AudioContext | null = null;
+  private enabled = true;
 
-  constructor() {
-    this.initializeSounds();
-  }
-
-  private initializeSounds() {
-    const soundFrequencies: Record<string, { freq: number; duration: number; type?: OscillatorType }> = {
-      click: { freq: 800, duration: 0.05, type: 'square' },
-      correct: { freq: 523.25, duration: 0.2, type: 'sine' },
-      wrong: { freq: 200, duration: 0.3, type: 'sawtooth' },
-      combo: { freq: 659.25, duration: 0.3, type: 'sine' },
-      boss: { freq: 300, duration: 0.5, type: 'triangle' },
-      gacha: { freq: 440, duration: 0.8, type: 'sine' },
-      purchase: { freq: 880, duration: 0.15, type: 'square' },
-    };
-
-    Object.entries(soundFrequencies).forEach(([name, config]) => {
-      this.createSound(name, config.freq, config.duration, config.type);
-    });
-  }
-
-  private createSound(name: string, frequency: number, duration: number, type: OscillatorType = 'sine') {
+  private getCtx(): AudioContext | null {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      oscillator.frequency.value = frequency;
-      oscillator.type = type;
-
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-
-      const audio = new Audio();
-      this.sounds.set(name, audio);
-    } catch (error) {
-      console.warn('Web Audio API not supported', error);
+      if (!this.ctx || this.ctx.state === 'closed') {
+        this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+      return this.ctx;
+    } catch {
+      return null;
     }
   }
 
   play(soundName: string) {
     if (!this.enabled) return;
+    const ctx = this.getCtx();
+    if (!ctx) return;
 
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
+    const notes = SOUNDS[soundName];
+    if (!notes) return;
 
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+    const now = ctx.currentTime;
+    for (const note of notes) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
 
-      const configs: Record<string, { freq: number; duration: number; type?: OscillatorType }> = {
-        click: { freq: 800, duration: 0.05, type: 'square' },
-        correct: { freq: 523.25, duration: 0.2, type: 'sine' },
-        wrong: { freq: 200, duration: 0.3, type: 'sawtooth' },
-        combo: { freq: 659.25, duration: 0.3, type: 'sine' },
-        boss: { freq: 300, duration: 0.5, type: 'triangle' },
-        gacha: { freq: 440, duration: 0.8, type: 'sine' },
-        purchase: { freq: 880, duration: 0.15, type: 'square' },
-      };
+      osc.type = note.type;
+      osc.frequency.value = note.freq;
+      if (note.detune) osc.detune.value = note.detune;
 
-      const config = configs[soundName] || { freq: 440, duration: 0.1, type: 'sine' as OscillatorType };
+      const start = now + note.startTime;
+      gain.gain.setValueAtTime(note.gain, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + note.duration);
 
-      oscillator.frequency.value = config.freq;
-      oscillator.type = config.type || 'sine';
-
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + config.duration);
-
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + config.duration);
-    } catch (error) {
-      console.warn('Failed to play sound:', soundName, error);
+      osc.start(start);
+      osc.stop(start + note.duration + 0.01);
     }
   }
 
-  playSequence(soundNames: string[], interval: number = 100) {
-    soundNames.forEach((name, index) => {
-      setTimeout(() => this.play(name), index * interval);
+  playSequence(soundNames: string[], interval = 150) {
+    soundNames.forEach((name, i) => {
+      setTimeout(() => this.play(name), i * interval);
     });
   }
 

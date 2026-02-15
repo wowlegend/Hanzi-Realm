@@ -428,15 +428,22 @@ export default function BattleView({
                       )}
                     </>
                   ) : (
-                    <>
-                      Wrong! {selectedOption?.explanation}
-                      <span className="block text-sm mt-2 text-yellow-200">
-                        Correct answer: {correctAnswer} ({currentLevel.correctAnswer.pinyin})
+                    <span className="block space-y-3">
+                      <span className="block text-white/90">{selectedOption?.explanation}</span>
+                      <span className="flex items-center gap-4 bg-black/30 rounded-xl p-3 border border-yellow-500/30">
+                        <span className="text-4xl sm:text-5xl font-black text-yellow-300">{correctAnswer}</span>
+                        <span className="block">
+                          <span className="block text-yellow-200 font-bold text-base">{currentLevel.correctAnswer.pinyin}</span>
+                          <span className="block text-white/80 text-sm">{currentLevel.correctAnswer.definition}</span>
+                          {currentLevel.correctAnswer.radical && (
+                            <span className="block text-white/50 text-xs mt-1">Radical: {currentLevel.correctAnswer.radical} ({currentLevel.correctAnswer.radicalMeaning})</span>
+                          )}
+                        </span>
                       </span>
                       {gameState.streakShieldActive && !gameState.streakShieldUsed && (
-                        <span className="block text-yellow-300 mt-2">Shield protected your streak!</span>
+                        <span className="block text-yellow-300 text-sm font-bold">Shield protected your streak!</span>
                       )}
-                    </>
+                    </span>
                   )}
                 </p>
                 {gameState.isCorrect && (

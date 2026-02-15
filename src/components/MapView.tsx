@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Volume2, Settings as SettingsIcon, Gift, Trophy } from 'lucide-react';
+import { Volume2, Settings as SettingsIcon, Gift, Trophy, BookOpen, RotateCcw } from 'lucide-react';
 import { GameSettings, PlayerInventory, MapNode, Companion, SessionStats } from '../types';
 import WorldMap from './WorldMap';
 import GradeBackground from './GradeBackground';
@@ -11,6 +11,8 @@ import CompanionDisplay from './CompanionDisplay';
 import DebugLog from './DebugLog';
 import AuthModal from './AuthModal';
 import UserProfile from './UserProfile';
+import WordBook from './WordBook';
+import FlashcardReview from './FlashcardReview';
 
 interface MapViewProps {
   settings: GameSettings;
@@ -28,6 +30,9 @@ interface MapViewProps {
   isGachaOpen: boolean;
   isReportOpen: boolean;
   isAuthModalOpen: boolean;
+  isWordBookOpen: boolean;
+  isFlashcardOpen: boolean;
+  wordsLearned: string[];
   onNodeSelect: (node: MapNode) => void;
   onBgmToggle: () => void;
   onSettingsOpen: () => void;
@@ -38,6 +43,10 @@ interface MapViewProps {
   onReportClose: () => void;
   onAuthOpen: () => void;
   onAuthClose: () => void;
+  onWordBookOpen: () => void;
+  onWordBookClose: () => void;
+  onFlashcardOpen: () => void;
+  onFlashcardClose: () => void;
   onSettingsChange: (settings: GameSettings) => void;
   onInventoryChange: (inventory: PlayerInventory) => void;
   onGachaRoll: (companion: Companion) => void;
@@ -60,6 +69,9 @@ export default function MapView({
   isGachaOpen,
   isReportOpen,
   isAuthModalOpen,
+  isWordBookOpen,
+  isFlashcardOpen,
+  wordsLearned,
   onNodeSelect,
   onBgmToggle,
   onSettingsOpen,
@@ -70,11 +82,21 @@ export default function MapView({
   onReportClose,
   onAuthOpen,
   onAuthClose,
+  onWordBookOpen,
+  onWordBookClose,
+  onFlashcardOpen,
+  onFlashcardClose,
   onSettingsChange,
   onInventoryChange,
   onGachaRoll,
   onDebugClose,
 }: MapViewProps) {
+  const audioSettings = {
+    useAzureTts: settings.useAzureTts,
+    audioLanguage: settings.audioLanguage,
+    audioSpeed: settings.audioSpeed,
+  };
+
   return (
     <>
       <GradeBackground gradeLevel={settings.gradeLevel} />
@@ -123,6 +145,27 @@ export default function MapView({
         <UserProfile onLoginClick={onAuthOpen} />
       </div>
 
+      <div className="fixed bottom-4 left-4 flex gap-2 z-20">
+        <motion.button
+          onClick={onWordBookOpen}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="btn-3d bg-gradient-to-b from-emerald-600 to-emerald-700 rounded-xl px-4 py-3 flex items-center gap-2"
+        >
+          <BookOpen className="w-5 h-5 text-white" />
+          <span className="text-white text-sm font-bold hidden sm:inline">Word Book</span>
+        </motion.button>
+        <motion.button
+          onClick={onFlashcardOpen}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="btn-3d bg-gradient-to-b from-sky-600 to-sky-700 rounded-xl px-4 py-3 flex items-center gap-2"
+        >
+          <RotateCcw className="w-5 h-5 text-white" />
+          <span className="text-white text-sm font-bold hidden sm:inline">Review</span>
+        </motion.button>
+      </div>
+
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={onSettingsClose}
@@ -144,6 +187,20 @@ export default function MapView({
         isOpen={isReportOpen}
         onClose={onReportClose}
         stats={sessionStats}
+      />
+
+      <WordBook
+        isOpen={isWordBookOpen}
+        onClose={onWordBookClose}
+        wordsLearned={wordsLearned}
+        audioSettings={audioSettings}
+      />
+
+      <FlashcardReview
+        isOpen={isFlashcardOpen}
+        onClose={onFlashcardClose}
+        wordsLearned={wordsLearned}
+        audioSettings={audioSettings}
       />
 
       <CompanionDisplay companion={activeCompanion} isHappy={companionHappy} />

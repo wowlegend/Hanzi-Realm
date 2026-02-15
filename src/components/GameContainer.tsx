@@ -15,6 +15,12 @@ import MapView from './MapView';
 import BattleView from './BattleView';
 import LevelClearedModal from './LevelClearedModal';
 import LootBoxModal from './LootBoxModal';
+import DailyRewardModal from './DailyRewardModal';
+import AchievementToast from './AchievementToast';
+import JadeAnimation from './JadeAnimation';
+import StreakCelebration from './StreakCelebration';
+import { checkDailyReward, claimDailyReward, getConsecutiveDays, DailyReward } from '../utils/dailyRewards';
+import { checkAchievements, Achievement } from '../data/achievements';
 
 const DEFAULT_GAME_STATE: GameState = {
   currentLevelIndex: 0,
@@ -55,6 +61,8 @@ const DEFAULT_INVENTORY: PlayerInventory = {
   companions: [],
 };
 
+const STREAK_MILESTONES = [5, 10, 15, 20, 25];
+
 export default function GameContainer() {
   const { user } = useAuth();
   const [levels, setLevels] = useState<Level[]>([]);
@@ -88,10 +96,22 @@ export default function GameContainer() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLevelClearedOpen, setIsLevelClearedOpen] = useState(false);
   const [isLootBoxOpen, setIsLootBoxOpen] = useState(false);
+  const [isWordBookOpen, setIsWordBookOpen] = useState(false);
+  const [isFlashcardOpen, setIsFlashcardOpen] = useState(false);
 
   const [isBossMode, setIsBossMode] = useState(false);
   const [bossTimer, setBossTimer] = useState(15);
   const [currentBoss, setCurrentBoss] = useState<Boss | null>(null);
+
+  const [isDailyRewardOpen, setIsDailyRewardOpen] = useState(false);
+  const [dailyRewardData, setDailyRewardData] = useState<{ reward: DailyReward | null; allRewards: DailyReward[] }>({ reward: null, allRewards: [] });
+  const [achievementToast, setAchievementToast] = useState<Achievement | null>(null);
+  const achievementQueueRef = useRef<Achievement[]>([]);
+  const [jadeAnimAmount, setJadeAnimAmount] = useState<number | null>(null);
+  const [jadeAnimBonus, setJadeAnimBonus] = useState(0);
+  const [streakCelebration, setStreakCelebration] = useState<number | null>(null);
+  const jadeAnimTimer = useRef<NodeJS.Timeout | null>(null);
+  const streakCelebTimer = useRef<NodeJS.Timeout | null>(null);
 
   const bossTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lootBoxTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -205,6 +225,12 @@ export default function GameContainer() {
       const nodes = generateWorldNodes(progress.worldNumber || 1);
       setMapNodes(nodes);
       saveMapState(nodes, progress.worldNumber || 1);
+    }
+
+    const daily = checkDailyReward();
+    if (daily.shouldShow) {
+      setDailyRewardData({ reward: daily.reward, allRewards: daily.allRewards });
+      setIsDailyRewardOpen(true);
     }
   };
 
@@ -345,9 +371,24 @@ export default function GameContainer() {
 
       confetti({ particleCount: isBossMode ? 200 : 100, spread: isBossMode ? 120 : 70, origin: { y: 0.6 }, colors: isBossMode ? ['#ffd700', '#ffed4e', '#ff6b35'] : ['#00b06f', '#ffd700', '#ffffff'] });
 
+      if (jadeAnimTimer.current) clearTimeout(jadeAnimTimer.current);
+      setJadeAnimAmount(jadeReward);
+      setJadeAnimBonus(getJadeBonus());
+      sfxManager.play('jade');
+      jadeAnimTimer.current = setTimeout(() => setJadeAnimAmount(null), 1500);
+
       const newJade = gameState.jade + jadeReward;
       const newStreak = gameState.currentStreak + streakIncrement;
       const newBestStreak = Math.max(newStreak, gameState.bestStreak);
+
+      if (STREAK_MILESTONES.includes(newStreak)) {
+        if (streakCelebTimer.current) clearTimeout(streakCelebTimer.current);
+        setStreakCelebration(newStreak);
+        sfxManager.play(newStreak >= 10 ? 'streak10' : 'streak5');
+        confetti({ particleCount: 300, spread: 150, origin: { y: 0.4 }, colors: ['#ffd700', '#ff6b35', '#00ffaa', '#00b0ff', '#ffffff'] });
+        streakCelebTimer.current = setTimeout(() => setStreakCelebration(null), 2500);
+      }
+
       let newBossesDefeated = gameState.bossesDefeated;
       const newBossHp = isBossMode ? gameState.bossHp - 1 : 0;
 
@@ -366,6 +407,15 @@ export default function GameContainer() {
         recordQuestionAttempt(user.id, String(currentLevel.id), true);
       }
       markQuestionAnswered(currentLevel.id);
+
+      runAchievementCheck({
+        questionsAnswered: gameState.questionsAnswered + 1,
+        bestStreak: newBestStreak,
+        bossesDefeated: newBossesDefeated,
+        wordsLearned: newWords.size,
+        jade: newJade,
+        worldNumber: gameState.worldNumber,
+      });
 
       if (isBossMode && newBossHp <= 0) {
         if (bossTimerRef.current) { clearInterval(bossTimerRef.current); bossTimerRef.current = null; }
@@ -553,9 +603,70 @@ export default function GameContainer() {
     saveInventory(newInv);
   };
 
+  const runAchievementCheck = (overrides?: Partial<{ jade: number; questionsAnswered: number; bestStreak: number; bossesDefeated: number; wordsLearned: number; worldNumber: number }>) => {
+    const stats = {
+      questionsAnswered: overrides?.questionsAnswered ?? gameState.questionsAnswered,
+      bestStreak: overrides?.bestStreak ?? gameState.bestStreak,
+      bossesDefeated: overrides?.bossesDefeated ?? gameState.bossesDefeated,
+      wordsLearned: overrides?.wordsLearned ?? gameState.wordsLearned.size,
+      worldNumber: overrides?.worldNumber ?? gameState.worldNumber,
+      jade: overrides?.jade ?? gameState.jade,
+      daysPlayed: 0,
+      consecutiveDays: getConsecutiveDays(),
+    };
+    const newlyUnlocked = checkAchievements(stats);
+    if (newlyUnlocked.length > 0) {
+      let totalBonus = 0;
+      for (const a of newlyUnlocked) totalBonus += a.jadeReward;
+      if (totalBonus > 0) {
+        setGameState(prev => ({ ...prev, jade: prev.jade + totalBonus }));
+      }
+      achievementQueueRef.current.push(...newlyUnlocked);
+      if (!achievementToast) showNextAchievement();
+    }
+  };
+
+  const showNextAchievement = () => {
+    const next = achievementQueueRef.current.shift();
+    if (next) {
+      setAchievementToast(next);
+      setTimeout(() => {
+        setAchievementToast(null);
+        setTimeout(() => showNextAchievement(), 300);
+      }, 3000);
+    }
+  };
+
+  const handleDailyRewardClaim = () => {
+    const jadeReward = claimDailyReward();
+    if (jadeReward > 0) {
+      const newJade = gameState.jade + jadeReward;
+      setGameState(prev => ({ ...prev, jade: newJade }));
+      syncProgress(newJade, gameState.currentStreak, gameState.bestStreak, gameState.questionsAnswered, gameState.bossesDefeated, gameState.worldNumber, settings.gradeLevel, Array.from(gameState.wordsLearned));
+    }
+    setIsDailyRewardOpen(false);
+    runAchievementCheck({ jade: gameState.jade + jadeReward });
+  };
+
   if (!currentLevel && !showMap) {
     return <div className="min-h-screen flex items-center justify-center text-white">Loading...</div>;
   }
+
+  const wordsLearnedArray = Array.from(gameState.wordsLearned);
+
+  const sharedOverlays = (
+    <>
+      <JadeAnimation amount={jadeAnimAmount} bonus={jadeAnimBonus} />
+      <StreakCelebration streak={streakCelebration} />
+      <DailyRewardModal
+        isOpen={isDailyRewardOpen}
+        onClaim={handleDailyRewardClaim}
+        reward={dailyRewardData.reward}
+        allRewards={dailyRewardData.allRewards}
+      />
+      <AchievementToast achievement={achievementToast} onDismiss={() => setAchievementToast(null)} />
+    </>
+  );
 
   if (showMap) {
     return (
@@ -576,6 +687,9 @@ export default function GameContainer() {
           isGachaOpen={isGachaOpen}
           isReportOpen={isReportOpen}
           isAuthModalOpen={isAuthModalOpen}
+          isWordBookOpen={isWordBookOpen}
+          isFlashcardOpen={isFlashcardOpen}
+          wordsLearned={wordsLearnedArray}
           onNodeSelect={handleNodeSelect}
           onBgmToggle={() => setBgmEnabled(!bgmEnabled)}
           onSettingsOpen={() => setIsSettingsOpen(true)}
@@ -586,12 +700,17 @@ export default function GameContainer() {
           onReportClose={() => setIsReportOpen(false)}
           onAuthOpen={() => setIsAuthModalOpen(true)}
           onAuthClose={() => setIsAuthModalOpen(false)}
+          onWordBookOpen={() => setIsWordBookOpen(true)}
+          onWordBookClose={() => setIsWordBookOpen(false)}
+          onFlashcardOpen={() => setIsFlashcardOpen(true)}
+          onFlashcardClose={() => setIsFlashcardOpen(false)}
           onSettingsChange={handleSettingsChange}
           onInventoryChange={handleInventoryChange}
           onGachaRoll={handleGachaRoll}
           onDebugClose={() => setDebugMessage('')}
         />
         <LevelClearedModal isOpen={isLevelClearedOpen} worldNumber={gameState.worldNumber} jadeBonus={500} onContinue={handleLevelClearedContinue} />
+        {sharedOverlays}
       </>
     );
   }
@@ -645,6 +764,7 @@ export default function GameContainer() {
       />
       <LevelClearedModal isOpen={isLevelClearedOpen} worldNumber={gameState.worldNumber} jadeBonus={500} onContinue={handleLevelClearedContinue} />
       <LootBoxModal isOpen={isLootBoxOpen} onClose={handleLootBoxClose} onReward={handleLootReward} />
+      {sharedOverlays}
     </>
   );
 }
