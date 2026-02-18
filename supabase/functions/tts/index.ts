@@ -155,6 +155,20 @@ async function synthesizeElevenLabs(
   const url = new URL(`https://api.elevenlabs.io/v1/text-to-speech/${resolvedVoiceId}/stream`);
   url.searchParams.set("output_format", "mp3_44100_128");
 
+  const bodyPayload = {
+    text,
+    model_id: "eleven_multilingual_v2",
+    language_code: "zh",
+    voice_settings: {
+      stability: 0.5,
+      similarity_boost: 0.75,
+      style: 0.0,
+      use_speaker_boost: true,
+    },
+  };
+
+  console.log(`ElevenLabs request: voice=${resolvedVoiceId}, text="${text.substring(0, 30)}..."`);
+
   const response = await fetch(url.toString(), {
     method: "POST",
     headers: {
@@ -162,23 +176,14 @@ async function synthesizeElevenLabs(
       "Content-Type": "application/json",
       "Accept": "audio/mpeg",
     },
-    body: JSON.stringify({
-      text,
-      model_id: "eleven_flash_v2_5",
-      language_code: "zh",
-      voice_settings: {
-        stability: 0.5,
-        similarity_boost: 0.75,
-        style: 0.0,
-        use_speaker_boost: true,
-      },
-    }),
+    body: JSON.stringify(bodyPayload),
   });
 
   if (!response.ok) {
     let errorMsg = `ElevenLabs API error: ${response.status}`;
     try {
       const errBody = await response.json();
+      console.error("ElevenLabs error body:", JSON.stringify(errBody));
       errorMsg = errBody.detail?.message || errBody.detail || errorMsg;
     } catch { /* ignore */ }
     throw new Error(errorMsg);
