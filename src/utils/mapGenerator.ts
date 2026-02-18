@@ -30,7 +30,7 @@ export function generateWorldNodes(worldId: number): MapNode[] {
     }
 
     x = Math.max(12, Math.min(88, x));
-    const y = 85 - progress * 75;
+    const y = 78 - progress * 65;
 
     let type: NodeType;
     if (i === nodeCount - 1) {
