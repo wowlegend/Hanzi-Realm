@@ -90,8 +90,8 @@ export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: Wor
   []);
 
   return (
-    <div className="fixed inset-0 flex flex-col">
-      <div className="p-4 pt-2 sm:p-6 sm:pt-2 flex items-start justify-between relative z-10">
+    <div className="fixed inset-0 sm:top-12 pb-14 sm:pb-0 flex flex-col">
+      <div className="p-4 pt-2 sm:p-4 flex items-start justify-between relative z-10">
         <div className="flex flex-col gap-3">
           <div>
             <motion.h1
@@ -141,7 +141,7 @@ export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: Wor
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-3 bg-black/40 backdrop-blur-sm px-4 py-3 rounded-2xl border border-white/10 mt-8 sm:mt-0"
+          className="flex items-center gap-3 bg-black/40 backdrop-blur-sm px-4 py-3 rounded-2xl border border-white/10"
         >
           <motion.div
             animate={{
@@ -351,7 +351,7 @@ export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: Wor
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
-          className="absolute bottom-16 sm:bottom-4 left-4 right-4 flex justify-center"
+          className="absolute bottom-4 left-4 right-4 flex justify-center"
         >
           <div className="bg-black/50 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 flex gap-5">
             {([

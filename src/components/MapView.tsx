@@ -115,14 +115,12 @@ export default function MapView({
         onAuthOpen={onAuthOpen}
       />
 
-      <div className="sm:pt-12">
-        <WorldMap
-          nodes={mapNodes}
-          worldNumber={worldNumber}
-          onNodeSelect={onNodeSelect}
-          jade={jade}
-        />
-      </div>
+      <WorldMap
+        nodes={mapNodes}
+        worldNumber={worldNumber}
+        onNodeSelect={onNodeSelect}
+        jade={jade}
+      />
 
 
       <SettingsModal
