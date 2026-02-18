@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Volume2, Settings as SettingsIcon, Loader, Gift, Trophy, Map, Zap, Lightbulb, Search } from 'lucide-react';
+import { Volume2, Loader, Zap, Lightbulb, Search } from 'lucide-react';
 import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats, MusicState, AnswerOption } from '../types';
 import { getBuffDescription } from '../data/companions';
 import { Boss } from '../data/bosses';
 import GradeBackground from './GradeBackground';
 import MusicManager from './MusicManager';
+import NavBar from './NavBar';
 import BossBattle from './BossBattle';
 import NarratorAvatar from './NarratorAvatar';
 import { ContentBlockRenderer } from './RubyText';
@@ -17,6 +18,8 @@ import CompanionDisplay from './CompanionDisplay';
 import DebugLog from './DebugLog';
 import AuthModal from './AuthModal';
 import UserProfile from './UserProfile';
+import WordBook from './WordBook';
+import FlashcardReview from './FlashcardReview';
 
 interface BattleViewProps {
   gameState: GameState;
@@ -44,11 +47,15 @@ interface BattleViewProps {
   isGachaOpen: boolean;
   isReportOpen: boolean;
   isAuthModalOpen: boolean;
+  isWordBookOpen: boolean;
+  isFlashcardOpen: boolean;
+  wordsLearned: string[];
   onOptionClick: (option: AnswerOption) => void;
   onSpeak: () => void;
   onNext: () => void;
   onShowMap: () => void;
   onToggleHint: () => void;
+  onBgmToggle: () => void;
   onSettingsOpen: () => void;
   onSettingsClose: () => void;
   onGachaOpen: () => void;
@@ -57,6 +64,10 @@ interface BattleViewProps {
   onReportClose: () => void;
   onAuthOpen: () => void;
   onAuthClose: () => void;
+  onWordBookOpen: () => void;
+  onWordBookClose: () => void;
+  onFlashcardOpen: () => void;
+  onFlashcardClose: () => void;
   onSettingsChange: (settings: GameSettings) => void;
   onInventoryChange: (inventory: PlayerInventory) => void;
   onGachaRoll: (companion: Companion) => void;
@@ -91,11 +102,15 @@ export default function BattleView({
   isGachaOpen,
   isReportOpen,
   isAuthModalOpen,
+  isWordBookOpen,
+  isFlashcardOpen,
+  wordsLearned,
   onOptionClick,
   onSpeak,
   onNext,
   onShowMap,
   onToggleHint,
+  onBgmToggle,
   onSettingsOpen,
   onSettingsClose,
   onGachaOpen,
@@ -104,6 +119,10 @@ export default function BattleView({
   onReportClose,
   onAuthOpen,
   onAuthClose,
+  onWordBookOpen,
+  onWordBookClose,
+  onFlashcardOpen,
+  onFlashcardClose,
   onSettingsChange,
   onInventoryChange,
   onGachaRoll,
@@ -120,6 +139,12 @@ export default function BattleView({
     }
   }, [gameState.showFeedback]);
 
+  const audioSettings = {
+    useAzureTts: settings.useAzureTts,
+    audioLanguage: settings.audioLanguage,
+    audioSpeed: settings.audioSpeed,
+  };
+
   const isInNode = !!gameState.currentNodeId;
   const nodeProgress = isInNode ? gameState.nodeQuestionsAnswered : 0;
   const nodeTotal = isInNode ? gameState.nodeQuestionsTotal : 0;
@@ -134,8 +159,21 @@ export default function BattleView({
       <GradeBackground gradeLevel={settings.gradeLevel} />
       <MusicManager state={musicState} volume={settings.bgmVolume} enabled={bgmEnabled} />
 
+      <NavBar
+        activeView="battle"
+        bgmEnabled={bgmEnabled}
+        onBgmToggle={onBgmToggle}
+        onSettingsOpen={onSettingsOpen}
+        onGachaOpen={onGachaOpen}
+        onReportOpen={onReportOpen}
+        onWordBookOpen={onWordBookOpen}
+        onFlashcardOpen={onFlashcardOpen}
+        onShowMap={onShowMap}
+        onAuthOpen={onAuthOpen}
+      />
+
       <div
-        className={`relative min-h-screen flex flex-col items-center p-4 sm:p-6 ${
+        className={`relative min-h-screen flex flex-col items-center p-4 sm:p-6 sm:pt-16 pb-20 sm:pb-6 ${
           isBossMode ? 'justify-start pt-48' : 'justify-center'
         }`}
       >
@@ -155,119 +193,59 @@ export default function BattleView({
           transition={{ duration: 0.4 }}
           className="w-full max-w-4xl relative z-10"
         >
-          {!isBossMode && (
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl sm:text-5xl font-black text-white mb-1 tracking-tight drop-shadow-lg">
-                  Hanzi Realm
-                </h1>
-                <p className="text-white text-xs sm:text-sm drop-shadow">
-                  Grade {settings.gradeLevel} - World {gameState.worldNumber}
-                  {gameState.gameMode === 'listening' && ' - Listening Mode'}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <motion.button
-                  onClick={onShowMap}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="btn-3d bg-gradient-to-b from-teal-500 to-teal-600 rounded-xl p-3"
-                >
-                  <Map className="w-6 h-6 text-white" />
-                </motion.button>
-                <motion.button
-                  onClick={onReportOpen}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="btn-3d bg-gradient-to-b from-blue-500 to-blue-600 rounded-xl p-3"
-                >
-                  <Trophy className="w-6 h-6 text-white" />
-                </motion.button>
-                <motion.button
-                  onClick={onSettingsOpen}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="btn-3d bg-gradient-to-b from-gray-600 to-gray-700 rounded-xl p-3"
-                >
-                  <SettingsIcon className="w-6 h-6 text-[#ffd700]" />
-                </motion.button>
-                <UserProfile onLoginClick={onAuthOpen} />
-              </div>
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl sm:text-5xl font-black text-white mb-1 tracking-tight drop-shadow-lg">
+                Hanzi Realm
+              </h1>
+              <p className="text-white text-xs sm:text-sm drop-shadow">
+                Grade {settings.gradeLevel} - World {gameState.worldNumber}
+                {gameState.gameMode === 'listening' && ' - Listening Mode'}
+              </p>
             </div>
-          )}
-
-          {isBossMode && (
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex gap-2">
-                <motion.button
-                  onClick={onShowMap}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="btn-3d bg-gradient-to-b from-teal-500 to-teal-600 rounded-xl p-2"
-                >
-                  <Map className="w-5 h-5 text-white" />
-                </motion.button>
-              </div>
-              <div className="flex gap-2">
-                <div className="voxel-card glass-yellow border-yellow-700 px-3 py-1">
-                  <p className="text-white text-sm font-black drop-shadow">{gameState.jade} Jade</p>
-                </div>
-                <div className="voxel-card px-3 py-1">
-                  <p className="text-white text-sm font-black drop-shadow">Streak: {gameState.currentStreak}</p>
-                </div>
-              </div>
+            <div className="hidden sm:block">
+              <UserProfile onLoginClick={onAuthOpen} />
             </div>
-          )}
+          </div>
 
-          {!isBossMode && (
-            <div className="flex flex-wrap gap-3 sm:gap-4 mb-6">
-              <div className="voxel-card glass-yellow border-yellow-700 px-4 py-2 sm:px-6 sm:py-3">
-                <p className="text-white text-sm sm:text-base font-black drop-shadow">
-                  {gameState.jade} Jade
-                </p>
-              </div>
-              <div className={`voxel-card px-4 py-2 sm:px-6 sm:py-3 relative transition-all duration-300 ${
-                gameState.fireMode ? 'border-orange-500 shadow-[0_0_20px_rgba(255,165,0,0.6)]' : 'border-orange-700'
-              }`}>
-                {gameState.currentStreak >= 3 && (
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
-                    transition={{ duration: 0.5, repeat: Infinity }}
-                    className="absolute -top-3 -right-3 text-3xl"
-                  >
-                    {gameState.fireMode ? <Zap className="w-8 h-8 text-yellow-400" /> : '?'}
-                  </motion.div>
-                )}
-                <p className={`text-sm sm:text-base font-black drop-shadow ${
-                  gameState.currentStreak > 0 ? 'text-white' : 'text-gray-300'
-                }`}>
-                  Streak: {gameState.currentStreak}
-                  {gameState.fireMode && ' FIRE!'}
-                </p>
-              </div>
-              <div className="voxel-card glass-green border-green-700 px-4 py-2 sm:px-6 sm:py-3">
-                <p className="text-white text-sm sm:text-base font-black drop-shadow">
-                  Best: {gameState.bestStreak}
-                </p>
-              </div>
-              {activeCompanion && (
-                <div className="voxel-card border-purple-700 px-4 py-2 sm:px-6 sm:py-3">
-                  <p className="text-white text-xs font-bold drop-shadow">
-                    {activeCompanion.emoji} {getBuffDescription(activeCompanion.buffType, activeCompanion.buffValue)}
-                  </p>
-                </div>
+          <div className="flex flex-wrap gap-3 sm:gap-4 mb-6">
+            <div className="voxel-card glass-yellow border-yellow-700 px-4 py-2 sm:px-6 sm:py-3">
+              <p className="text-white text-sm sm:text-base font-black drop-shadow">
+                {gameState.jade} Jade
+              </p>
+            </div>
+            <div className={`voxel-card px-4 py-2 sm:px-6 sm:py-3 relative transition-all duration-300 ${
+              gameState.fireMode ? 'border-orange-500 shadow-[0_0_20px_rgba(255,165,0,0.6)]' : 'border-orange-700'
+            }`}>
+              {gameState.currentStreak >= 3 && (
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 0.5, repeat: Infinity }}
+                  className="absolute -top-3 -right-3 text-3xl"
+                >
+                  {gameState.fireMode ? <Zap className="w-8 h-8 text-yellow-400" /> : '?'}
+                </motion.div>
               )}
-              <motion.button
-                onClick={onGachaOpen}
-                whileHover={{ scale: 1.05, rotate: [0, -5, 5, 0] }}
-                whileTap={{ scale: 0.95 }}
-                className="btn-3d-gold px-4 py-2 sm:px-6 sm:py-3 rounded-xl flex items-center gap-2 text-white font-black"
-              >
-                <Gift className="w-5 h-5" />
-                <span className="text-sm sm:text-base">GACHA</span>
-              </motion.button>
+              <p className={`text-sm sm:text-base font-black drop-shadow ${
+                gameState.currentStreak > 0 ? 'text-white' : 'text-gray-300'
+              }`}>
+                Streak: {gameState.currentStreak}
+                {gameState.fireMode && ' FIRE!'}
+              </p>
             </div>
-          )}
+            <div className="voxel-card glass-green border-green-700 px-4 py-2 sm:px-6 sm:py-3">
+              <p className="text-white text-sm sm:text-base font-black drop-shadow">
+                Best: {gameState.bestStreak}
+              </p>
+            </div>
+            {activeCompanion && (
+              <div className="voxel-card border-teal-700 px-4 py-2 sm:px-6 sm:py-3">
+                <p className="text-white text-xs font-bold drop-shadow">
+                  {activeCompanion.emoji} {getBuffDescription(activeCompanion.buffType, activeCompanion.buffValue)}
+                </p>
+              </div>
+            )}
+          </div>
 
           <motion.div
             animate={shake ? { rotateZ: [-1, 1, -1, 1, 0] } : {}}
@@ -538,6 +516,20 @@ export default function BattleView({
           onClose={onReportClose}
           stats={sessionStats}
           gameState={gameState}
+        />
+
+        <WordBook
+          isOpen={isWordBookOpen}
+          onClose={onWordBookClose}
+          wordsLearned={wordsLearned}
+          audioSettings={audioSettings}
+        />
+
+        <FlashcardReview
+          isOpen={isFlashcardOpen}
+          onClose={onFlashcardClose}
+          wordsLearned={wordsLearned}
+          audioSettings={audioSettings}
         />
 
         <CompanionDisplay companion={activeCompanion} isHappy={companionHappy} />

@@ -754,11 +754,15 @@ export default function GameContainer() {
         isGachaOpen={isGachaOpen}
         isReportOpen={isReportOpen}
         isAuthModalOpen={isAuthModalOpen}
+        isWordBookOpen={isWordBookOpen}
+        isFlashcardOpen={isFlashcardOpen}
+        wordsLearned={wordsLearnedArray}
         onOptionClick={handleOptionClick}
         onSpeak={handleSpeak}
         onNext={handleNext}
         onShowMap={() => setShowMap(true)}
         onToggleHint={() => setShowHint(!showHint)}
+        onBgmToggle={() => setBgmEnabled(!bgmEnabled)}
         onSettingsOpen={() => setIsSettingsOpen(true)}
         onSettingsClose={() => setIsSettingsOpen(false)}
         onGachaOpen={() => setIsGachaOpen(true)}
@@ -767,6 +771,10 @@ export default function GameContainer() {
         onReportClose={() => setIsReportOpen(false)}
         onAuthOpen={() => setIsAuthModalOpen(true)}
         onAuthClose={() => setIsAuthModalOpen(false)}
+        onWordBookOpen={() => setIsWordBookOpen(true)}
+        onWordBookClose={() => setIsWordBookOpen(false)}
+        onFlashcardOpen={() => setIsFlashcardOpen(true)}
+        onFlashcardClose={() => setIsFlashcardOpen(false)}
         onSettingsChange={handleSettingsChange}
         onInventoryChange={handleInventoryChange}
         onGachaRoll={handleGachaRoll}

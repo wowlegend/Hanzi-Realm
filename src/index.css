@@ -169,3 +169,7 @@
 .map-completed-glow {
   box-shadow: 0 0 10px rgba(74, 222, 128, 0.4), inset 0 0 6px rgba(74, 222, 128, 0.1);
 }
+
+.safe-area-pb {
+  padding-bottom: max(0.375rem, env(safe-area-inset-bottom));
+}
