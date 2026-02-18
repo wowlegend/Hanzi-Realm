@@ -167,8 +167,6 @@ async function synthesizeElevenLabs(
     },
   };
 
-  console.log(`ElevenLabs request: voice=${resolvedVoiceId}, text="${text.substring(0, 30)}..."`);
-
   const response = await fetch(url.toString(), {
     method: "POST",
     headers: {
@@ -192,6 +190,80 @@ async function synthesizeElevenLabs(
   return response;
 }
 
+let azureTokenCache: { token: string; expiresAt: number } | null = null;
+
+async function getAzureToken(): Promise<string> {
+  const now = Date.now();
+  if (azureTokenCache && azureTokenCache.expiresAt > now) {
+    return azureTokenCache.token;
+  }
+
+  const apiKey = Deno.env.get("AZURE_SPEECH_KEY");
+  const region = Deno.env.get("AZURE_SPEECH_REGION") || "eastasia";
+
+  if (!apiKey) {
+    throw new Error("AZURE_SPEECH_KEY not configured. Set it in Supabase Edge Function Secrets.");
+  }
+
+  const tokenUrl = `https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`;
+
+  const response = await fetch(tokenUrl, {
+    method: "POST",
+    headers: {
+      "Ocp-Apim-Subscription-Key": apiKey,
+      "Content-Length": "0",
+    },
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("Azure token error:", errText);
+    throw new Error(`Azure token request failed: ${response.status}`);
+  }
+
+  const token = await response.text();
+  azureTokenCache = { token, expiresAt: now + 8 * 60 * 1000 };
+  return token;
+}
+
+async function synthesizeAzure(
+  text: string,
+  voice: string,
+  rate: string,
+): Promise<Uint8Array> {
+  const region = Deno.env.get("AZURE_SPEECH_REGION") || "eastasia";
+  const token = await getAzureToken();
+
+  const ssml = buildSSML(text, voice, rate);
+  const ttsUrl = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
+
+  console.log(`Azure TTS request: voice=${voice}, region=${region}, text="${text.substring(0, 30)}..."`);
+
+  const response = await fetch(ttsUrl, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/ssml+xml",
+      "X-Microsoft-OutputFormat": "audio-48khz-192kbitrate-mono-mp3",
+      "User-Agent": "HanziApp",
+    },
+    body: ssml,
+  });
+
+  if (!response.ok) {
+    let errorMsg = `Azure TTS API error: ${response.status}`;
+    try {
+      const errText = await response.text();
+      console.error("Azure TTS error:", errText);
+      errorMsg = `Azure TTS error ${response.status}: ${errText.substring(0, 200)}`;
+    } catch { /* ignore */ }
+    throw new Error(errorMsg);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return new Uint8Array(arrayBuffer);
+}
+
 function cleanInputText(text: string): string {
   return text
     .replace(/_+/g, "")
@@ -211,7 +283,7 @@ Deno.serve(async (req: Request) => {
       text,
       voice = "zh-CN-XiaoxiaoNeural",
       rate = "0%",
-      engine = "edge",
+      engine = "azure",
       voiceId = "",
     } = body;
 
@@ -249,6 +321,23 @@ Deno.serve(async (req: Request) => {
           ...corsHeaders,
           "Content-Type": "audio/mpeg",
           "Transfer-Encoding": "chunked",
+          "Cache-Control": "public, max-age=86400",
+        },
+      });
+    }
+
+    if (engine === "azure") {
+      const audio = await synthesizeAzure(cleanText, voice, rate);
+
+      if (audio.length === 0) {
+        throw new Error("No audio data from Azure TTS");
+      }
+
+      return new Response(audio, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "audio/mpeg",
+          "Content-Length": String(audio.length),
           "Cache-Control": "public, max-age=86400",
         },
       });

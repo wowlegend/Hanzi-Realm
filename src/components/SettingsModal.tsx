@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Settings, Trash2, Volume2, Zap, Cpu, MessageSquare } from 'lucide-react';
+import { X, Settings, Trash2, Volume2, Zap, Cpu, MessageSquare, Cloud } from 'lucide-react';
 import { GameSettings, PlayerInventory } from '../types';
 import Toast from './Toast';
 import { clearAudioCache, speakChinese, getTtsEngine, setTtsEngine, TtsEngine } from '../utils/audio';
@@ -17,8 +17,9 @@ interface SettingsModalProps {
 }
 
 const ENGINE_OPTIONS: { id: TtsEngine; label: string; desc: string; icon: typeof Zap }[] = [
-  { id: 'elevenlabs', label: 'ElevenLabs', desc: 'Evan Zhao - Warm & Natural (Recommended)', icon: Zap },
-  { id: 'edge', label: 'Edge Neural TTS', desc: 'Microsoft neural voices', icon: Cpu },
+  { id: 'azure', label: 'Azure Neural TTS', desc: 'Microsoft Azure - High quality Mandarin voices (Recommended)', icon: Cloud },
+  { id: 'elevenlabs', label: 'ElevenLabs', desc: 'Requires paid ElevenLabs plan', icon: Zap },
+  { id: 'edge', label: 'Edge TTS', desc: 'Free Microsoft edge voices (no API key needed)', icon: Cpu },
   { id: 'browser', label: 'Browser TTS', desc: 'Built-in system voice (offline)', icon: MessageSquare },
 ];
 
@@ -182,9 +183,9 @@ export default function SettingsModal({
               <div>
                 <h3 className="text-white text-xl font-bold mb-4">Audio Settings</h3>
                 <div className="space-y-4">
-                  {ttsEngine === 'edge' && (
+                  {(ttsEngine === 'azure' || ttsEngine === 'edge') && (
                     <div>
-                      <label className="block text-gray-300 text-sm mb-2">Edge TTS Voice</label>
+                      <label className="block text-gray-300 text-sm mb-2">Voice</label>
                       <select
                         value={voiceChoice}
                         onChange={(e) => setVoiceChoice(e.target.value)}

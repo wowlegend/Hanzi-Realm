@@ -1,6 +1,6 @@
 import { getCachedAudio, setCachedAudio, clearTTSCache } from './ttsCache';
 
-export type TtsEngine = 'elevenlabs' | 'edge' | 'browser';
+export type TtsEngine = 'azure' | 'elevenlabs' | 'edge' | 'browser';
 
 let debugCallback: ((message: string, isError: boolean) => void) | null = null;
 
@@ -13,7 +13,11 @@ export const clearAudioCache = () => {
 };
 
 export function getTtsEngine(): TtsEngine {
-  return (localStorage.getItem('ttsEngine') as TtsEngine) || 'elevenlabs';
+  const stored = localStorage.getItem('ttsEngine') as TtsEngine | null;
+  if (stored === 'elevenlabs' || stored === 'edge' || stored === 'browser' || stored === 'azure') {
+    return stored;
+  }
+  return 'azure';
 }
 
 export function setTtsEngine(engine: TtsEngine) {
@@ -44,6 +48,27 @@ export const speakChinese = async (
 ): Promise<void> => {
   try {
     const engine = getTtsEngine();
+
+    if (engine === 'azure') {
+      try {
+        await speakWithAzureTts(text, audioSpeed);
+        return;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        if (debugCallback) debugCallback(`Azure TTS error: ${msg}. Falling back to Edge TTS...`, true);
+      }
+
+      try {
+        await speakWithEdgeTts(text, audioSpeed);
+        return;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        if (debugCallback) debugCallback(`Edge TTS fallback error: ${msg}. Using browser voice.`, true);
+      }
+
+      speakWithBrowserTts(text, fallbackLanguage, audioSpeed);
+      return;
+    }
 
     if (engine === 'elevenlabs') {
       try {
@@ -87,6 +112,59 @@ export const speakChinese = async (
       speakWithBrowserTts(text, fallbackLanguage, audioSpeed);
     } catch { /* last resort - silently fail */ }
   }
+};
+
+const speakWithAzureTts = async (text: string, audioSpeed: number = 1.0): Promise<void> => {
+  const cleaned = cleanText(text);
+  if (!cleaned) return;
+
+  const selectedVoice = localStorage.getItem('azureVoice') || 'zh-CN-XiaoxiaoNeural';
+  const rate = speedToSsmlRate(audioSpeed);
+  const textToPlay = cleaned.endsWith('\u3002') ? cleaned : cleaned + '\u3002';
+  const cacheKey = `az_${textToPlay}_${selectedVoice}_${rate}`;
+
+  const cached = await getCachedAudio(cacheKey);
+  if (cached) {
+    if (debugCallback) debugCallback('Playing cached Azure TTS audio', false);
+    await playBlob(cached);
+    return;
+  }
+
+  if (debugCallback) debugCallback('Fetching Azure TTS audio...', false);
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/tts`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${supabaseKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      text: textToPlay,
+      voice: selectedVoice,
+      rate,
+      engine: 'azure',
+    }),
+  });
+
+  if (!response.ok) {
+    let errorMsg = `Status ${response.status}`;
+    try {
+      const errBody = await response.json();
+      errorMsg = errBody.error || errorMsg;
+    } catch { /* ignore */ }
+    throw new Error(errorMsg);
+  }
+
+  const blob = await response.blob();
+  if (blob.size === 0) throw new Error('Empty audio response');
+
+  setCachedAudio(cacheKey, blob);
+
+  if (debugCallback) debugCallback(`Azure TTS audio ready (${blob.size} bytes)`, false);
+  await playBlob(blob);
 };
 
 const speakWithElevenLabs = async (text: string, audioSpeed: number = 1.0): Promise<void> => {
@@ -165,7 +243,7 @@ const speakWithEdgeTts = async (text: string, audioSpeed: number = 1.0): Promise
       'Authorization': `Bearer ${supabaseKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ text: textToPlay, voice: selectedVoice, rate }),
+    body: JSON.stringify({ text: textToPlay, voice: selectedVoice, rate, engine: 'edge' }),
   });
 
   if (!response.ok) {
