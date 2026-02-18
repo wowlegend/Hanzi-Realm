@@ -60,15 +60,12 @@ export function generateSentenceOrderLevels(grade: number, count: number): Level
     if (usedIds.has(id)) continue;
     usedIds.add(id);
 
-    const scrambled = shuffle(words);
     const correctSentence = words.join('');
 
-    const segments: PinyinChar[] = scrambled.map(w => ({
-      char: w,
-      pinyin: '',
-    }));
-
-    const block: ContentBlock = { type: 'text', segments };
+    const block: ContentBlock = {
+      type: 'text',
+      segments: [{ char: baseLevel.correctAnswer.definition, pinyin: '' }],
+    };
 
     const options: AnswerOption[] = [
       {

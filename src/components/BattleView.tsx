@@ -336,6 +336,7 @@ export default function BattleView({
             {currentLevel.questionType === 'sentence-order' && !gameState.showFeedback && onSentenceSubmit && (
               <div className="mb-6">
                 <SentenceOrderView
+                  key={currentLevel.id}
                   level={currentLevel}
                   onSubmit={onSentenceSubmit}
                   disabled={gameState.showFeedback}

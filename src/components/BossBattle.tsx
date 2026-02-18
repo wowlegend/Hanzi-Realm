@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Zap, Wind, Droplets, Sparkles } from 'lucide-react';
 import { Boss } from '../data/bosses';
+import BossMonsterSprite from './BossMonsterSprite';
 
 interface BossBattleProps {
   boss: Boss;
@@ -124,9 +125,9 @@ export default function BossBattle({ boss, timeLeft, maxTime, isActive, bossHp =
               transition={{ duration: 0.5, repeat: Infinity }}
               className="flex items-center gap-3"
             >
-              <span className="text-4xl font-black" style={{ color: boss.color }}>
-                {boss.character}
-              </span>
+              <div className="w-12 h-12 flex-shrink-0">
+                <BossMonsterSprite bossId={boss.id} color={boss.color} attackColor={boss.attackColor} isAttacking={false} size={48} />
+              </div>
               <div>
                 <h2 className="text-2xl sm:text-3xl font-black text-white tracking-wider">
                   BOSS: {boss.name}
@@ -199,18 +200,13 @@ export default function BossBattle({ boss, timeLeft, maxTime, isActive, bossHp =
             }}
           >
             <div className="relative">
-              <motion.div
-                animate={{
-                  textShadow: isAttacking
-                    ? [`0 0 40px ${boss.color}`, `0 0 80px ${boss.attackColor}`, `0 0 40px ${boss.color}`]
-                    : `0 0 30px ${boss.color}`,
-                }}
-                transition={{ duration: 0.2, repeat: isAttacking ? Infinity : 0 }}
-                className="text-[120px] sm:text-[180px] font-black select-none"
-                style={{ color: boss.color }}
-              >
-                {boss.character}
-              </motion.div>
+              <BossMonsterSprite
+                bossId={boss.id}
+                color={boss.color}
+                attackColor={boss.attackColor}
+                isAttacking={isAttacking}
+                size={160}
+              />
 
               {isAttacking && (
                 <motion.div
