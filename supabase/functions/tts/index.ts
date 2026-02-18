@@ -13,8 +13,8 @@ function uuid(): string {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
-function buildSSML(text: string, voice: string): string {
-  return `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='zh-CN'><voice name='${voice}'>${escapeXml(text)}</voice></speak>`;
+function buildSSML(text: string, voice: string, rate: string): string {
+  return `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='zh-CN'><voice name='${voice}'><prosody rate='${rate}'>${escapeXml(text)}</prosody></voice></speak>`;
 }
 
 function escapeXml(s: string): string {
@@ -37,6 +37,7 @@ function extractAudioFromBinary(data: Uint8Array): Uint8Array {
 async function synthesize(
   text: string,
   voice: string,
+  rate: string,
 ): Promise<Uint8Array> {
   const connId = uuid();
   const reqId = uuid();
@@ -70,7 +71,7 @@ async function synthesize(
                 sentenceBoundaryEnabled: "false",
                 wordBoundaryEnabled: "false",
               },
-              outputFormat: "audio-24khz-48kbitrate-mono-mp3",
+              outputFormat: "audio-48khz-192kbitrate-mono-mp3",
             },
           },
         },
@@ -80,7 +81,7 @@ async function synthesize(
         `Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n${config}`,
       );
 
-      const ssml = buildSSML(text, voice);
+      const ssml = buildSSML(text, voice, rate);
       ws.send(
         `X-RequestId:${reqId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n${ssml}`,
       );
@@ -143,7 +144,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { text, voice = "zh-CN-YunxiNeural" } = await req.json();
+    const { text, voice = "zh-CN-XiaoxiaoNeural", rate = "0%" } = await req.json();
 
     if (!text || typeof text !== "string") {
       return new Response(
@@ -171,7 +172,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const audio = await synthesize(cleanText, voice);
+    const audio = await synthesize(cleanText, voice, rate);
 
     if (audio.length === 0) {
       return new Response(
@@ -188,6 +189,7 @@ Deno.serve(async (req: Request) => {
         ...corsHeaders,
         "Content-Type": "audio/mpeg",
         "Content-Length": String(audio.length),
+        "Cache-Control": "public, max-age=86400",
       },
     });
   } catch (error) {

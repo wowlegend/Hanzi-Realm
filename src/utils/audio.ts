@@ -10,6 +10,12 @@ export const clearAudioCache = () => {
   audioCache.clear();
 };
 
+function speedToSsmlRate(speed: number): string {
+  const pct = Math.round((speed - 1) * 100);
+  if (pct >= 0) return `+${pct}%`;
+  return `${pct}%`;
+}
+
 export const speakChinese = async (
   text: string,
   _apiKey: string,
@@ -42,13 +48,13 @@ const speakWithEdgeTts = async (text: string, audioSpeed: number = 1.0): Promise
     .trim();
 
   const textToPlay = cleanText.endsWith('\u3002') ? cleanText : cleanText + '\u3002';
-  const selectedVoice = localStorage.getItem('azureVoice') || 'zh-CN-YunxiNeural';
-  const cacheKey = `${textToPlay}_edge_${selectedVoice}`;
+  const selectedVoice = localStorage.getItem('azureVoice') || 'zh-CN-XiaoxiaoNeural';
+  const rate = speedToSsmlRate(audioSpeed);
+  const cacheKey = `${textToPlay}_${selectedVoice}_${rate}`;
 
   if (audioCache.has(cacheKey)) {
     const audioUrl = audioCache.get(cacheKey)!;
     const audio = new Audio(audioUrl);
-    audio.playbackRate = audioSpeed;
     audio.play();
     if (debugCallback) {
       debugCallback('Playing cached audio', false);
@@ -57,7 +63,7 @@ const speakWithEdgeTts = async (text: string, audioSpeed: number = 1.0): Promise
   }
 
   if (debugCallback) {
-    debugCallback('Fetching Edge TTS audio...', false);
+    debugCallback('Fetching TTS audio...', false);
   }
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -69,7 +75,7 @@ const speakWithEdgeTts = async (text: string, audioSpeed: number = 1.0): Promise
       'Authorization': `Bearer ${supabaseKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ text: textToPlay, voice: selectedVoice }),
+    body: JSON.stringify({ text: textToPlay, voice: selectedVoice, rate }),
   });
 
   if (!response.ok) {
@@ -90,11 +96,10 @@ const speakWithEdgeTts = async (text: string, audioSpeed: number = 1.0): Promise
   audioCache.set(cacheKey, audioUrl);
 
   const audio = new Audio(audioUrl);
-  audio.playbackRate = audioSpeed;
   audio.play();
 
   if (debugCallback) {
-    debugCallback(`Edge TTS audio ready (${blob.size} bytes)`, false);
+    debugCallback(`TTS audio ready (${blob.size} bytes)`, false);
   }
 };
 

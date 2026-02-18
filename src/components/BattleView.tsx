@@ -17,7 +17,6 @@ import ReportCard from './ReportCard';
 import CompanionDisplay from './CompanionDisplay';
 import DebugLog from './DebugLog';
 import AuthModal from './AuthModal';
-import UserProfile from './UserProfile';
 import WordBook from './WordBook';
 import FlashcardReview from './FlashcardReview';
 
@@ -193,19 +192,14 @@ export default function BattleView({
           transition={{ duration: 0.4 }}
           className="w-full max-w-4xl relative z-10"
         >
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl sm:text-5xl font-black text-white mb-1 tracking-tight drop-shadow-lg">
-                Hanzi Realm
-              </h1>
-              <p className="text-white text-xs sm:text-sm drop-shadow">
-                Grade {settings.gradeLevel} - World {gameState.worldNumber}
-                {gameState.gameMode === 'listening' && ' - Listening Mode'}
-              </p>
-            </div>
-            <div className="hidden sm:block">
-              <UserProfile onLoginClick={onAuthOpen} />
-            </div>
+          <div className="mb-6">
+            <h1 className="text-3xl sm:text-5xl font-black text-white mb-1 tracking-tight drop-shadow-lg">
+              Hanzi Realm
+            </h1>
+            <p className="text-white text-xs sm:text-sm drop-shadow">
+              Grade {settings.gradeLevel} - World {gameState.worldNumber}
+              {gameState.gameMode === 'listening' && ' - Listening Mode'}
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-3 sm:gap-4 mb-6">

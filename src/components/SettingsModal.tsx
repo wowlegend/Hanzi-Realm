@@ -154,10 +154,17 @@ export default function SettingsModal({
                           onChange={(e) => setVoiceChoice(e.target.value)}
                           className="w-full border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#00b06f]"
                         >
-                          <option value="zh-CN-YunxiNeural">Male (Yunxi)</option>
-                          <option value="zh-CN-XiaoxiaoNeural">Female (Xiaoxiao)</option>
+                          <optgroup label="Female Voices">
+                            <option value="zh-CN-XiaoxiaoNeural">Xiaoxiao - Warm & Friendly (Recommended)</option>
+                            <option value="zh-CN-XiaoyiNeural">Xiaoyi - Lively & Youthful</option>
+                          </optgroup>
+                          <optgroup label="Male Voices">
+                            <option value="zh-CN-YunxiNeural">Yunxi - Natural & Clear</option>
+                            <option value="zh-CN-YunjianNeural">Yunjian - Deep & Confident</option>
+                            <option value="zh-CN-YunyangNeural">Yunyang - Professional Newscaster</option>
+                          </optgroup>
                         </select>
-                        <p className="text-gray-500 text-xs mt-2">Microsoft neural voices - free, no API key needed</p>
+                        <p className="text-gray-500 text-xs mt-2">High-quality 48kHz neural voices for native Mandarin pronunciation</p>
                       </div>
                       <div className="flex gap-2">
                         <button

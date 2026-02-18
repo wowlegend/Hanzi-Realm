@@ -9,7 +9,6 @@ import ReportCard from './ReportCard';
 import CompanionDisplay from './CompanionDisplay';
 import DebugLog from './DebugLog';
 import AuthModal from './AuthModal';
-import UserProfile from './UserProfile';
 import WordBook from './WordBook';
 import FlashcardReview from './FlashcardReview';
 
@@ -125,9 +124,6 @@ export default function MapView({
         />
       </div>
 
-      <div className="fixed top-14 right-4 z-20 hidden sm:block">
-        <UserProfile onLoginClick={onAuthOpen} />
-      </div>
 
       <SettingsModal
         isOpen={isSettingsOpen}
