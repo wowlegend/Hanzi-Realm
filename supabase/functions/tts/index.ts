@@ -34,7 +34,7 @@ function extractAudioFromBinary(data: Uint8Array): Uint8Array {
   return data.slice(audioStart);
 }
 
-async function synthesize(
+async function synthesizeEdge(
   text: string,
   voice: string,
   rate: string,
@@ -138,13 +138,76 @@ async function synthesize(
   });
 }
 
+async function synthesizeElevenLabs(
+  text: string,
+  voiceId: string,
+): Promise<Response> {
+  const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
+  if (!apiKey) {
+    throw new Error("ELEVENLABS_API_KEY not configured");
+  }
+
+  const resolvedVoiceId = voiceId || Deno.env.get("ELEVENLABS_VOICE_ID") || "";
+  if (!resolvedVoiceId) {
+    throw new Error("No ElevenLabs voice ID provided");
+  }
+
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${resolvedVoiceId}/stream`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "xi-api-key": apiKey,
+      "Content-Type": "application/json",
+      "Accept": "audio/mpeg",
+    },
+    body: JSON.stringify({
+      text,
+      model_id: "eleven_flash_v2_5",
+      output_format: "mp3_44100_128",
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.75,
+        style: 0.0,
+        use_speaker_boost: true,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    let errorMsg = `ElevenLabs API error: ${response.status}`;
+    try {
+      const errBody = await response.json();
+      errorMsg = errBody.detail?.message || errBody.detail || errorMsg;
+    } catch { /* ignore */ }
+    throw new Error(errorMsg);
+  }
+
+  return response;
+}
+
+function cleanInputText(text: string): string {
+  return text
+    .replace(/_+/g, "")
+    .replace(/\{[^}]+\}/g, "")
+    .replace(/\s+/g, "")
+    .trim();
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    const { text, voice = "zh-CN-XiaoxiaoNeural", rate = "0%" } = await req.json();
+    const body = await req.json();
+    const {
+      text,
+      voice = "zh-CN-XiaoxiaoNeural",
+      rate = "0%",
+      engine = "edge",
+      voiceId = "",
+    } = body;
 
     if (!text || typeof text !== "string") {
       return new Response(
@@ -156,11 +219,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const cleanText = text
-      .replace(/_+/g, "")
-      .replace(/\{[^}]+\}/g, "")
-      .replace(/\s+/g, "")
-      .trim();
+    const cleanText = cleanInputText(text);
 
     if (!cleanText) {
       return new Response(
@@ -172,7 +231,24 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const audio = await synthesize(cleanText, voice, rate);
+    if (engine === "elevenlabs") {
+      const elResponse = await synthesizeElevenLabs(cleanText, voiceId);
+
+      if (!elResponse.body) {
+        throw new Error("No response body from ElevenLabs");
+      }
+
+      return new Response(elResponse.body, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "audio/mpeg",
+          "Transfer-Encoding": "chunked",
+          "Cache-Control": "public, max-age=86400",
+        },
+      });
+    }
+
+    const audio = await synthesizeEdge(cleanText, voice, rate);
 
     if (audio.length === 0) {
       return new Response(
@@ -194,9 +270,12 @@ Deno.serve(async (req: Request) => {
     });
   } catch (error) {
     console.error("TTS error:", error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ error: "Text-to-speech request failed" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Text-to-speech request failed" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

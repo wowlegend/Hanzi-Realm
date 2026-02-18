@@ -1,4 +1,6 @@
-const audioCache = new Map<string, string>();
+import { getCachedAudio, setCachedAudio, clearTTSCache } from './ttsCache';
+
+export type TtsEngine = 'elevenlabs' | 'edge' | 'browser';
 
 let debugCallback: ((message: string, isError: boolean) => void) | null = null;
 
@@ -7,8 +9,24 @@ export const setDebugCallback = (callback: (message: string, isError: boolean) =
 };
 
 export const clearAudioCache = () => {
-  audioCache.clear();
+  clearTTSCache();
 };
+
+export function getTtsEngine(): TtsEngine {
+  return (localStorage.getItem('ttsEngine') as TtsEngine) || 'elevenlabs';
+}
+
+export function setTtsEngine(engine: TtsEngine) {
+  localStorage.setItem('ttsEngine', engine);
+}
+
+function cleanText(text: string): string {
+  return text
+    .replace(/_/g, '')
+    .replace(/\{[^}]+\}/g, '')
+    .replace(/\s+/g, '')
+    .trim();
+}
 
 function speedToSsmlRate(speed: number): string {
   const pct = Math.round((speed - 1) * 100);
@@ -24,47 +42,112 @@ export const speakChinese = async (
   fallbackLanguage: string = 'zh-CN',
   audioSpeed: number = 1.0
 ): Promise<void> => {
-  if (useEdgeTts) {
+  const engine = getTtsEngine();
+
+  if (engine === 'elevenlabs') {
+    try {
+      await speakWithElevenLabs(text, audioSpeed);
+      return;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (debugCallback) debugCallback(`ElevenLabs error: ${msg}. Falling back...`, true);
+    }
+
+    if (useEdgeTts) {
+      try {
+        await speakWithEdgeTts(text, audioSpeed);
+        return;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        if (debugCallback) debugCallback(`Edge TTS fallback error: ${msg}`, true);
+      }
+    }
+
+    speakWithBrowserTts(text, fallbackLanguage, audioSpeed);
+    return;
+  }
+
+  if (engine === 'edge' || (engine !== 'browser' && useEdgeTts)) {
     try {
       await speakWithEdgeTts(text, audioSpeed);
+      return;
     } catch (error) {
-      console.error('Edge TTS error:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (debugCallback) {
-        debugCallback(`Edge TTS Error: ${errorMessage}. Using browser voice.`, true);
-      }
-      speakWithFallback(text, fallbackLanguage, audioSpeed);
-    }
-  } else {
-    speakWithFallback(text, fallbackLanguage, audioSpeed);
-  }
-};
-
-const speakWithEdgeTts = async (text: string, audioSpeed: number = 1.0): Promise<void> => {
-  const cleanText = text
-    .replace(/_/g, '')
-    .replace(/\{[^}]+\}/g, '')
-    .replace(/\s+/g, '')
-    .trim();
-
-  const textToPlay = cleanText.endsWith('\u3002') ? cleanText : cleanText + '\u3002';
-  const selectedVoice = localStorage.getItem('azureVoice') || 'zh-CN-XiaoxiaoNeural';
-  const rate = speedToSsmlRate(audioSpeed);
-  const cacheKey = `${textToPlay}_${selectedVoice}_${rate}`;
-
-  if (audioCache.has(cacheKey)) {
-    const audioUrl = audioCache.get(cacheKey)!;
-    const audio = new Audio(audioUrl);
-    audio.play();
-    if (debugCallback) {
-      debugCallback('Playing cached audio', false);
+      const msg = error instanceof Error ? error.message : String(error);
+      if (debugCallback) debugCallback(`Edge TTS error: ${msg}. Using browser voice.`, true);
+      speakWithBrowserTts(text, fallbackLanguage, audioSpeed);
     }
     return;
   }
 
-  if (debugCallback) {
-    debugCallback('Fetching TTS audio...', false);
+  speakWithBrowserTts(text, fallbackLanguage, audioSpeed);
+};
+
+const speakWithElevenLabs = async (text: string, audioSpeed: number = 1.0): Promise<void> => {
+  const cleaned = cleanText(text);
+  if (!cleaned) return;
+
+  const cacheKey = `el_${cleaned}_${audioSpeed}`;
+
+  const cached = await getCachedAudio(cacheKey);
+  if (cached) {
+    if (debugCallback) debugCallback('Playing cached ElevenLabs audio', false);
+    await playBlob(cached);
+    return;
   }
+
+  if (debugCallback) debugCallback('Fetching ElevenLabs audio...', false);
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/tts`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${supabaseKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      text: cleaned,
+      engine: 'elevenlabs',
+      speed: audioSpeed,
+    }),
+  });
+
+  if (!response.ok) {
+    let errorMsg = `Status ${response.status}`;
+    try {
+      const errBody = await response.json();
+      errorMsg = errBody.error || errorMsg;
+    } catch { /* ignore */ }
+    throw new Error(errorMsg);
+  }
+
+  const blob = await response.blob();
+  if (blob.size === 0) throw new Error('Empty audio response');
+
+  setCachedAudio(cacheKey, blob);
+
+  if (debugCallback) debugCallback(`ElevenLabs audio ready (${blob.size} bytes)`, false);
+  await playBlob(blob);
+};
+
+const speakWithEdgeTts = async (text: string, audioSpeed: number = 1.0): Promise<void> => {
+  const cleaned = cleanText(text);
+  if (!cleaned) return;
+
+  const textToPlay = cleaned.endsWith('\u3002') ? cleaned : cleaned + '\u3002';
+  const selectedVoice = localStorage.getItem('azureVoice') || 'zh-CN-XiaoxiaoNeural';
+  const rate = speedToSsmlRate(audioSpeed);
+  const cacheKey = `edge_${textToPlay}_${selectedVoice}_${rate}`;
+
+  const cached = await getCachedAudio(cacheKey);
+  if (cached) {
+    if (debugCallback) debugCallback('Playing cached Edge TTS audio', false);
+    await playBlob(cached);
+    return;
+  }
+
+  if (debugCallback) debugCallback('Fetching Edge TTS audio...', false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -88,53 +171,62 @@ const speakWithEdgeTts = async (text: string, audioSpeed: number = 1.0): Promise
   }
 
   const blob = await response.blob();
-  if (blob.size === 0) {
-    throw new Error('Empty audio response');
-  }
+  if (blob.size === 0) throw new Error('Empty audio response');
 
-  const audioUrl = URL.createObjectURL(blob);
-  audioCache.set(cacheKey, audioUrl);
+  setCachedAudio(cacheKey, blob);
 
-  const audio = new Audio(audioUrl);
-  audio.play();
-
-  if (debugCallback) {
-    debugCallback(`TTS audio ready (${blob.size} bytes)`, false);
-  }
+  if (debugCallback) debugCallback(`Edge TTS audio ready (${blob.size} bytes)`, false);
+  await playBlob(blob);
 };
 
-const speakWithFallback = (text: string, language: string, audioSpeed: number = 1.0): void => {
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
+function playBlob(blob: Blob): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      resolve();
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Audio playback failed'));
+    };
+    audio.play().catch((err) => {
+      URL.revokeObjectURL(url);
+      reject(err);
+    });
+  });
+}
 
-    const voices = window.speechSynthesis.getVoices();
+const speakWithBrowserTts = (text: string, language: string, audioSpeed: number = 1.0): void => {
+  if (!('speechSynthesis' in window)) return;
 
-    let selectedVoice = voices.find(v =>
-      v.lang.startsWith(language) && (v.name.includes('Neural') || v.name.includes('Microsoft'))
+  window.speechSynthesis.cancel();
+  const voices = window.speechSynthesis.getVoices();
+
+  let selectedVoice = voices.find(v =>
+    v.lang.startsWith(language) && (v.name.includes('Neural') || v.name.includes('Microsoft'))
+  );
+  if (!selectedVoice) {
+    selectedVoice = voices.find(v =>
+      v.lang.startsWith(language) && v.name.includes('Google')
     );
-    if (!selectedVoice) {
-      selectedVoice = voices.find(v =>
-        v.lang.startsWith(language) && v.name.includes('Google')
-      );
-    }
-    if (!selectedVoice) {
-      selectedVoice = voices.find(v => v.lang.startsWith(language));
-    }
-    if (!selectedVoice) {
-      selectedVoice = voices.find(v =>
-        v.name.includes('Ting-Ting') || v.name.includes('Chinese')
-      );
-    }
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = language;
-    utterance.rate = audioSpeed;
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-    }
-
-    window.speechSynthesis.speak(utterance);
   }
+  if (!selectedVoice) {
+    selectedVoice = voices.find(v => v.lang.startsWith(language));
+  }
+  if (!selectedVoice) {
+    selectedVoice = voices.find(v =>
+      v.name.includes('Ting-Ting') || v.name.includes('Chinese')
+    );
+  }
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = language;
+  utterance.rate = audioSpeed;
+  if (selectedVoice) utterance.voice = selectedVoice;
+
+  window.speechSynthesis.speak(utterance);
 };
 
 export const playSound = (type: 'correct' | 'wrong' | 'purchase' | 'combo'): void => {

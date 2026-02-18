@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Settings, Trash2, Volume2 } from 'lucide-react';
+import { X, Settings, Trash2, Volume2, Zap, Cpu, MessageSquare } from 'lucide-react';
 import { GameSettings, PlayerInventory } from '../types';
 import Toast from './Toast';
-import { clearAudioCache, speakChinese } from '../utils/audio';
+import { clearAudioCache, speakChinese, getTtsEngine, setTtsEngine, TtsEngine } from '../utils/audio';
 import { AUDIO_DEFAULTS } from '../utils/constants';
 
 interface SettingsModalProps {
@@ -16,6 +16,12 @@ interface SettingsModalProps {
   onInventoryChange: (inventory: PlayerInventory) => void;
 }
 
+const ENGINE_OPTIONS: { id: TtsEngine; label: string; desc: string; icon: typeof Zap }[] = [
+  { id: 'elevenlabs', label: 'ElevenLabs', desc: 'Evan Zhao - Warm & Natural (Recommended)', icon: Zap },
+  { id: 'edge', label: 'Edge Neural TTS', desc: 'Microsoft neural voices', icon: Cpu },
+  { id: 'browser', label: 'Browser TTS', desc: 'Built-in system voice (offline)', icon: MessageSquare },
+];
+
 export default function SettingsModal({
   isOpen,
   onClose,
@@ -25,6 +31,7 @@ export default function SettingsModal({
   onSettingsChange,
   onInventoryChange,
 }: SettingsModalProps) {
+  const [ttsEngine, setTtsEngineLocal] = useState<TtsEngine>(getTtsEngine);
   const [voiceChoice, setVoiceChoice] = useState(() => {
     return localStorage.getItem('azureVoice') || AUDIO_DEFAULTS.VOICE;
   });
@@ -47,6 +54,14 @@ export default function SettingsModal({
     setGradeLevel(settings.gradeLevel || 1);
     setAudioSpeed(settings.audioSpeed || 0.75);
   }, [settings]);
+
+  const handleEngineChange = (engine: TtsEngine) => {
+    setTtsEngineLocal(engine);
+    setTtsEngine(engine);
+    if (engine === 'edge') {
+      setUseEdgeTts(true);
+    }
+  };
 
   const themes = [
     { id: 'default', name: 'Default', colors: 'bg-gradient-to-br from-[#2a2d2f] to-[#1a1c1e]' },
@@ -133,58 +148,78 @@ export default function SettingsModal({
               </div>
 
               <div>
+                <h3 className="text-white text-xl font-bold mb-4">Voice Engine</h3>
+                <div className="space-y-2">
+                  {ENGINE_OPTIONS.map((opt) => {
+                    const Icon = opt.icon;
+                    const isActive = ttsEngine === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => handleEngineChange(opt.id)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                          isActive
+                            ? 'border-[#00b06f] bg-[#00b06f]/10'
+                            : 'border-gray-700 bg-black/20 hover:border-gray-500'
+                        }`}
+                      >
+                        <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-[#00b06f]' : 'text-gray-400'}`} />
+                        <div className="min-w-0">
+                          <p className={`font-bold text-sm ${isActive ? 'text-white' : 'text-gray-300'}`}>
+                            {opt.label}
+                          </p>
+                          <p className="text-gray-500 text-xs truncate">{opt.desc}</p>
+                        </div>
+                        {isActive && (
+                          <div className="ml-auto w-2 h-2 rounded-full bg-[#00b06f] shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
                 <h3 className="text-white text-xl font-bold mb-4">Audio Settings</h3>
                 <div className="space-y-4">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={useEdgeTts}
-                      onChange={(e) => setUseEdgeTts(e.target.checked)}
-                      className="w-5 h-5"
-                    />
-                    <span className="text-gray-300">Use Neural TTS (High Quality Mandarin)</span>
-                  </label>
-
-                  {useEdgeTts && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-gray-300 text-sm mb-2">Voice</label>
-                        <select
-                          value={voiceChoice}
-                          onChange={(e) => setVoiceChoice(e.target.value)}
-                          className="w-full border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#00b06f]"
-                        >
-                          <optgroup label="Female Voices">
-                            <option value="zh-CN-XiaoxiaoNeural">Xiaoxiao - Warm & Friendly (Recommended)</option>
-                            <option value="zh-CN-XiaoyiNeural">Xiaoyi - Lively & Youthful</option>
-                          </optgroup>
-                          <optgroup label="Male Voices">
-                            <option value="zh-CN-YunxiNeural">Yunxi - Natural & Clear</option>
-                            <option value="zh-CN-YunjianNeural">Yunjian - Deep & Confident</option>
-                            <option value="zh-CN-YunyangNeural">Yunyang - Professional Newscaster</option>
-                          </optgroup>
-                        </select>
-                        <p className="text-gray-500 text-xs mt-2">High-quality 48kHz neural voices for native Mandarin pronunciation</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleTestAudio}
-                          disabled={isTestingAudio}
-                          className="flex-1 bg-[#00b06f] hover:bg-[#00d184] disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Volume2 className="w-5 h-5" />
-                          {isTestingAudio ? 'Testing...' : 'Test Voice'}
-                        </button>
-                        <button
-                          onClick={handleClearCache}
-                          className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Clear Cache
-                        </button>
-                      </div>
+                  {ttsEngine === 'edge' && (
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-2">Edge TTS Voice</label>
+                      <select
+                        value={voiceChoice}
+                        onChange={(e) => setVoiceChoice(e.target.value)}
+                        className="w-full border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#00b06f]"
+                      >
+                        <optgroup label="Female Voices">
+                          <option value="zh-CN-XiaoxiaoNeural">Xiaoxiao - Warm & Friendly</option>
+                          <option value="zh-CN-XiaoyiNeural">Xiaoyi - Lively & Youthful</option>
+                        </optgroup>
+                        <optgroup label="Male Voices">
+                          <option value="zh-CN-YunxiNeural">Yunxi - Natural & Clear</option>
+                          <option value="zh-CN-YunjianNeural">Yunjian - Deep & Confident</option>
+                          <option value="zh-CN-YunyangNeural">Yunyang - Professional Newscaster</option>
+                        </optgroup>
+                      </select>
                     </div>
                   )}
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleTestAudio}
+                      disabled={isTestingAudio}
+                      className="flex-1 bg-[#00b06f] hover:bg-[#00d184] disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Volume2 className="w-5 h-5" />
+                      {isTestingAudio ? 'Testing...' : 'Test Voice'}
+                    </button>
+                    <button
+                      onClick={handleClearCache}
+                      className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Clear Cache
+                    </button>
+                  </div>
 
                   <div>
                     <label className="block text-gray-300 text-sm mb-2">Grade Level</label>
