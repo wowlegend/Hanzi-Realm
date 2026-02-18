@@ -58,29 +58,6 @@ export function generateWorldNodes(worldId: number): MapNode[] {
   return nodes;
 }
 
-export function getNodeIcon(type: NodeType): string {
-  switch (type) {
-    case 'battle': return '\u2694';
-    case 'blind': return '\uD83C\uDFA7';
-    case 'treasure': return '\uD83D\uDC8E';
-    case 'boss': return '\uD83D\uDC80';
-    default: return '\u2753';
-  }
-}
-
-export function getNodeColor(type: NodeType, status: string): string {
-  if (status === 'locked') return 'bg-gray-700 border-gray-600';
-  if (status === 'completed') return 'bg-green-700 border-green-500';
-
-  switch (type) {
-    case 'battle': return 'bg-blue-600 border-blue-400';
-    case 'blind': return 'bg-teal-600 border-teal-400';
-    case 'treasure': return 'bg-yellow-600 border-yellow-400';
-    case 'boss': return 'bg-red-600 border-red-400';
-    default: return 'bg-gray-600 border-gray-400';
-  }
-}
-
 export function generatePathPoints(nodes: MapNode[]): string {
   if (nodes.length < 2) return '';
 
