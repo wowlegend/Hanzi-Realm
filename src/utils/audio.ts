@@ -42,44 +42,51 @@ export const speakChinese = async (
   fallbackLanguage: string = 'zh-CN',
   audioSpeed: number = 1.0
 ): Promise<void> => {
-  const engine = getTtsEngine();
+  try {
+    const engine = getTtsEngine();
 
-  if (engine === 'elevenlabs') {
-    try {
-      await speakWithElevenLabs(text, audioSpeed);
-      return;
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (debugCallback) debugCallback(`ElevenLabs error: ${msg}. Falling back...`, true);
-    }
+    if (engine === 'elevenlabs') {
+      try {
+        await speakWithElevenLabs(text, audioSpeed);
+        return;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        if (debugCallback) debugCallback(`ElevenLabs error: ${msg}. Falling back...`, true);
+      }
 
-    if (useEdgeTts) {
       try {
         await speakWithEdgeTts(text, audioSpeed);
         return;
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        if (debugCallback) debugCallback(`Edge TTS fallback error: ${msg}`, true);
+        if (debugCallback) debugCallback(`Edge TTS fallback error: ${msg}. Using browser voice.`, true);
       }
+
+      speakWithBrowserTts(text, fallbackLanguage, audioSpeed);
+      return;
+    }
+
+    if (engine === 'edge' || (engine !== 'browser' && useEdgeTts)) {
+      try {
+        await speakWithEdgeTts(text, audioSpeed);
+        return;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        if (debugCallback) debugCallback(`Edge TTS error: ${msg}. Using browser voice.`, true);
+      }
+
+      speakWithBrowserTts(text, fallbackLanguage, audioSpeed);
+      return;
     }
 
     speakWithBrowserTts(text, fallbackLanguage, audioSpeed);
-    return;
-  }
-
-  if (engine === 'edge' || (engine !== 'browser' && useEdgeTts)) {
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (debugCallback) debugCallback(`TTS critical error: ${msg}`, true);
     try {
-      await speakWithEdgeTts(text, audioSpeed);
-      return;
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (debugCallback) debugCallback(`Edge TTS error: ${msg}. Using browser voice.`, true);
       speakWithBrowserTts(text, fallbackLanguage, audioSpeed);
-    }
-    return;
+    } catch { /* last resort - silently fail */ }
   }
-
-  speakWithBrowserTts(text, fallbackLanguage, audioSpeed);
 };
 
 const speakWithElevenLabs = async (text: string, audioSpeed: number = 1.0): Promise<void> => {

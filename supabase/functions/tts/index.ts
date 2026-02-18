@@ -144,17 +144,18 @@ async function synthesizeElevenLabs(
 ): Promise<Response> {
   const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
   if (!apiKey) {
-    throw new Error("ELEVENLABS_API_KEY not configured");
+    throw new Error("ELEVENLABS_API_KEY not configured. Set it in Supabase Edge Function Secrets.");
   }
 
   const resolvedVoiceId = voiceId || Deno.env.get("ELEVENLABS_VOICE_ID") || "";
   if (!resolvedVoiceId) {
-    throw new Error("No ElevenLabs voice ID provided");
+    throw new Error("ELEVENLABS_VOICE_ID not configured. Set it in Supabase Edge Function Secrets.");
   }
 
-  const url = `https://api.elevenlabs.io/v1/text-to-speech/${resolvedVoiceId}/stream`;
+  const url = new URL(`https://api.elevenlabs.io/v1/text-to-speech/${resolvedVoiceId}/stream`);
+  url.searchParams.set("output_format", "mp3_44100_128");
 
-  const response = await fetch(url, {
+  const response = await fetch(url.toString(), {
     method: "POST",
     headers: {
       "xi-api-key": apiKey,
@@ -164,7 +165,7 @@ async function synthesizeElevenLabs(
     body: JSON.stringify({
       text,
       model_id: "eleven_flash_v2_5",
-      output_format: "mp3_44100_128",
+      language_code: "zh",
       voice_settings: {
         stability: 0.5,
         similarity_boost: 0.75,
