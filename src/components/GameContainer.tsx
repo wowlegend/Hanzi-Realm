@@ -116,11 +116,19 @@ export default function GameContainer() {
   const bossTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lootBoxTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const autoSpeakDone = useRef(false);
+  const ttsSuccessShown = useRef(false);
 
   useEffect(() => {
     setDebugCallback((message: string, isError: boolean) => {
-      setDebugMessage(message);
-      setDebugIsError(isError);
+      if (isError) {
+        setDebugMessage(message);
+        setDebugIsError(true);
+      } else if (!ttsSuccessShown.current) {
+        ttsSuccessShown.current = true;
+        setDebugMessage(message);
+        setDebugIsError(false);
+        setTimeout(() => setDebugMessage(''), 3000);
+      }
     });
   }, []);
 

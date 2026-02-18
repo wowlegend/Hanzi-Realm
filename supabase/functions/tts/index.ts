@@ -190,14 +190,11 @@ async function synthesizeElevenLabs(
   return response;
 }
 
-let azureTokenCache: { token: string; expiresAt: number } | null = null;
-
-async function getAzureToken(): Promise<string> {
-  const now = Date.now();
-  if (azureTokenCache && azureTokenCache.expiresAt > now) {
-    return azureTokenCache.token;
-  }
-
+async function synthesizeAzure(
+  text: string,
+  voice: string,
+  rate: string,
+): Promise<Uint8Array> {
   const apiKey = Deno.env.get("AZURE_SPEECH_KEY");
   const region = Deno.env.get("AZURE_SPEECH_REGION") || "eastasia";
 
@@ -205,46 +202,15 @@ async function getAzureToken(): Promise<string> {
     throw new Error("AZURE_SPEECH_KEY not configured. Set it in Supabase Edge Function Secrets.");
   }
 
-  const tokenUrl = `https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`;
-
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: {
-      "Ocp-Apim-Subscription-Key": apiKey,
-      "Content-Length": "0",
-    },
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error("Azure token error:", errText);
-    throw new Error(`Azure token request failed: ${response.status}`);
-  }
-
-  const token = await response.text();
-  azureTokenCache = { token, expiresAt: now + 8 * 60 * 1000 };
-  return token;
-}
-
-async function synthesizeAzure(
-  text: string,
-  voice: string,
-  rate: string,
-): Promise<Uint8Array> {
-  const region = Deno.env.get("AZURE_SPEECH_REGION") || "eastasia";
-  const token = await getAzureToken();
-
   const ssml = buildSSML(text, voice, rate);
   const ttsUrl = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
-
-  console.log(`Azure TTS request: voice=${voice}, region=${region}, text="${text.substring(0, 30)}..."`);
 
   const response = await fetch(ttsUrl, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${token}`,
+      "Ocp-Apim-Subscription-Key": apiKey,
       "Content-Type": "application/ssml+xml",
-      "X-Microsoft-OutputFormat": "audio-48khz-192kbitrate-mono-mp3",
+      "X-Microsoft-OutputFormat": "audio-24khz-96kbitrate-mono-mp3",
       "User-Agent": "HanziApp",
     },
     body: ssml,

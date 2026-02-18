@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { getTtsEngine } from '../utils/audio';
 
 interface DebugLogProps {
   message: string;
@@ -7,8 +8,18 @@ interface DebugLogProps {
   onClose: () => void;
 }
 
+const ENGINE_LABELS: Record<string, string> = {
+  azure: 'Azure TTS',
+  elevenlabs: 'ElevenLabs',
+  edge: 'Edge TTS',
+  browser: 'Browser TTS',
+};
+
 export default function DebugLog({ message, isError, onClose }: DebugLogProps) {
   if (!message) return null;
+
+  const engine = getTtsEngine();
+  const label = ENGINE_LABELS[engine] || 'TTS';
 
   return (
     <AnimatePresence>
@@ -23,7 +34,7 @@ export default function DebugLog({ message, isError, onClose }: DebugLogProps) {
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="flex-1">
             <p className="font-bold text-sm mb-1">
-              {isError ? '🔴 ElevenLabs API Error' : '✅ ElevenLabs Success'}
+              {isError ? `${label} Error` : `${label} Ready`}
             </p>
             <p className="text-xs font-mono break-all">{message}</p>
           </div>
