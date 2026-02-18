@@ -90,7 +90,7 @@ export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: Wor
   []);
 
   return (
-    <div className="fixed inset-0 sm:top-12 pb-14 sm:pb-0 flex flex-col">
+    <div className="fixed inset-0 bottom-14 sm:bottom-0 sm:top-12 flex flex-col">
       <div className="p-4 pt-2 sm:p-4 flex items-start justify-between relative z-10">
         <div className="flex flex-col gap-3">
           <div>
