@@ -46,18 +46,44 @@ export default function NarratorAvatar({ seed, isSpeaking, fireMode }: NarratorA
       {fireMode && (
         <>
           <motion.div
-            className="absolute -top-3 -left-1 text-2xl"
-            animate={{ y: [0, -5, 0], opacity: [0.7, 1, 0.7] }}
+            className="absolute -top-3 -left-1"
+            animate={{ y: [0, -5, 0], opacity: [0.7, 1, 0.7], scale: [1, 1.2, 1] }}
             transition={{ duration: 0.5, repeat: Infinity }}
           >
-            ?
+            <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
+              <path d="M10 0C10 0 4 8 4 14c0 3.3 2.7 6 6 6s6-2.7 6-6C16 8 10 0 10 0z" fill="url(#flame1)" />
+              <path d="M10 6C10 6 7 11 7 15c0 1.7 1.3 3 3 3s3-1.3 3-3C13 11 10 6 10 6z" fill="url(#flame2)" />
+              <defs>
+                <linearGradient id="flame1" x1="10" y1="0" x2="10" y2="20" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#FF6B35" />
+                  <stop offset="1" stopColor="#FF2D00" />
+                </linearGradient>
+                <linearGradient id="flame2" x1="10" y1="6" x2="10" y2="18" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#FFD700" />
+                  <stop offset="1" stopColor="#FF6B35" />
+                </linearGradient>
+              </defs>
+            </svg>
           </motion.div>
           <motion.div
-            className="absolute -top-2 -right-1 text-xl"
-            animate={{ y: [0, -4, 0], opacity: [0.6, 1, 0.6] }}
+            className="absolute -top-2 -right-1"
+            animate={{ y: [0, -4, 0], opacity: [0.6, 1, 0.6], scale: [0.9, 1.1, 0.9] }}
             transition={{ duration: 0.4, repeat: Infinity, delay: 0.2 }}
           >
-            ?
+            <svg width="16" height="20" viewBox="0 0 16 20" fill="none">
+              <path d="M8 0C8 0 3 6.5 3 11.5c0 2.8 2.2 5 5 5s5-2.2 5-5C13 6.5 8 0 8 0z" fill="url(#flame3)" />
+              <path d="M8 5C8 5 5.5 9 5.5 12.5c0 1.4 1.1 2.5 2.5 2.5s2.5-1.1 2.5-2.5C10.5 9 8 5 8 5z" fill="url(#flame4)" />
+              <defs>
+                <linearGradient id="flame3" x1="8" y1="0" x2="8" y2="16.5" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#FF6B35" />
+                  <stop offset="1" stopColor="#FF2D00" />
+                </linearGradient>
+                <linearGradient id="flame4" x1="8" y1="5" x2="8" y2="15" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#FFD700" />
+                  <stop offset="1" stopColor="#FF6B35" />
+                </linearGradient>
+              </defs>
+            </svg>
           </motion.div>
         </>
       )}

@@ -159,14 +159,17 @@ export default function ReportCard({ isOpen, onClose, stats, gameState }: Report
                 <>
                   <div className="grid grid-cols-2 gap-3 mb-6">
                     <div className="bg-black/30 border border-white/10 rounded-2xl p-4 text-center">
+                      <Target className="w-6 h-6 text-green-400 mx-auto mb-1" />
                       <p className="text-3xl font-black text-white">{gameState.questionsAnswered}</p>
                       <p className="text-xs text-gray-400">Total Questions</p>
                     </div>
                     <div className="bg-black/30 border border-white/10 rounded-2xl p-4 text-center">
+                      <Gem className="w-6 h-6 text-[#ffd700] mx-auto mb-1" />
                       <p className="text-3xl font-black text-[#ffd700]">{gameState.jade}</p>
                       <p className="text-xs text-yellow-400">Total Jade</p>
                     </div>
                     <div className="bg-black/30 border border-white/10 rounded-2xl p-4 text-center">
+                      <Flame className="w-6 h-6 text-orange-400 mx-auto mb-1" />
                       <p className="text-3xl font-black text-orange-400">{gameState.bestStreak}</p>
                       <p className="text-xs text-orange-300">Best Streak</p>
                     </div>

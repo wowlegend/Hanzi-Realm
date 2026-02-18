@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { GameSettings, MapNode, Companion } from '../types';
+import { withRetry } from './syncRetry';
 
 interface GameProgress {
   jade: number;
@@ -10,6 +11,15 @@ interface GameProgress {
   world_number: number;
   grade_level: number;
   words_learned: string[];
+  streak_shield_active?: boolean;
+  streak_shield_used?: boolean;
+  seen_question_ids?: string[];
+}
+
+interface DailyRewardCloud {
+  last_claim_date: string | null;
+  consecutive_days: number;
+  claimed_days: number[];
 }
 
 export async function syncProgressToCloud(
@@ -21,29 +31,38 @@ export async function syncProgressToCloud(
   bossesDefeated: number,
   worldNumber: number,
   gradeLevel: number,
-  wordsLearned: string[]
+  wordsLearned: string[],
+  streakShieldActive?: boolean,
+  streakShieldUsed?: boolean,
+  seenQuestionIds?: string[]
 ): Promise<void> {
-  const { error } = await supabase
-    .from('game_progress')
-    .upsert({
-      user_id: userId,
-      jade,
-      current_streak: currentStreak,
-      best_streak: bestStreak,
-      questions_answered: questionsAnswered,
-      bosses_defeated: bossesDefeated,
-      world_number: worldNumber,
-      grade_level: gradeLevel,
-      words_learned: wordsLearned,
-      updated_at: new Date().toISOString(),
-    }, {
-      onConflict: 'user_id'
-    });
+  const payload: Record<string, unknown> = {
+    user_id: userId,
+    jade,
+    current_streak: currentStreak,
+    best_streak: bestStreak,
+    questions_answered: questionsAnswered,
+    bosses_defeated: bossesDefeated,
+    world_number: worldNumber,
+    grade_level: gradeLevel,
+    words_learned: wordsLearned,
+    updated_at: new Date().toISOString(),
+  };
 
-  if (error) {
-    console.error('Error syncing progress:', error);
-    throw error;
-  }
+  if (streakShieldActive !== undefined) payload.streak_shield_active = streakShieldActive;
+  if (streakShieldUsed !== undefined) payload.streak_shield_used = streakShieldUsed;
+  if (seenQuestionIds !== undefined) payload.seen_question_ids = seenQuestionIds;
+
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('game_progress')
+      .upsert(payload, { onConflict: 'user_id' });
+
+    if (error) {
+      console.error('Error syncing progress:', error);
+      throw error;
+    }
+  });
 }
 
 export async function loadProgressFromCloud(userId: string): Promise<GameProgress | null> {
@@ -217,6 +236,49 @@ export async function loadMapStateFromCloud(userId: string, worldId: number): Pr
   }
 
   return data?.nodes as MapNode[] || null;
+}
+
+export async function syncDailyRewardsToCloud(
+  userId: string,
+  lastClaimDate: string,
+  consecutiveDays: number,
+  claimedDays: number[]
+): Promise<void> {
+  const { error } = await supabase
+    .from('daily_rewards')
+    .upsert({
+      user_id: userId,
+      last_claim_date: lastClaimDate || null,
+      consecutive_days: consecutiveDays,
+      claimed_days: claimedDays,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+
+  if (error) {
+    console.error('Error syncing daily rewards:', error);
+    throw error;
+  }
+}
+
+export async function loadDailyRewardsFromCloud(userId: string): Promise<DailyRewardCloud | null> {
+  const { data, error } = await supabase
+    .from('daily_rewards')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error loading daily rewards:', error);
+    return null;
+  }
+
+  if (!data) return null;
+
+  return {
+    last_claim_date: data.last_claim_date,
+    consecutive_days: data.consecutive_days,
+    claimed_days: data.claimed_days || [],
+  };
 }
 
 export async function recordCharacterAttempt(

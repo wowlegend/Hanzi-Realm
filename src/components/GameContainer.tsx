@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import confetti from 'canvas-confetti';
-import { generateLevel, getLevelFullSentence, getCorrectAnswerFromLevel, markQuestionAnswered, resetSessionTracker } from '../data/questionBank';
+import { generateLevel, generateLevelWithSpacedRepetition, getLevelFullSentence, getCorrectAnswerFromLevel, markQuestionAnswered, resetSessionTracker } from '../data/questionBank';
 import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats, MapNode, MusicState, LootReward, AnswerOption } from '../types';
 import { saveProgress, loadProgress, saveInventory, loadInventory, saveSettings, loadSettings, addWordLearned, saveMapState, loadMapState } from '../utils/storage';
 import { syncProgressToCloud, syncCompanionsToCloud, syncMapStateToCloud, recordCharacterAttempt, loadProgressFromCloud, loadCompanionsFromCloud, loadSettingsFromCloud, loadMapStateFromCloud } from '../utils/cloudStorage';
@@ -19,7 +19,8 @@ import DailyRewardModal from './DailyRewardModal';
 import AchievementToast from './AchievementToast';
 import JadeAnimation from './JadeAnimation';
 import StreakCelebration from './StreakCelebration';
-import { checkDailyReward, claimDailyReward, getConsecutiveDays, DailyReward } from '../utils/dailyRewards';
+import SyncIndicator from './SyncIndicator';
+import { checkDailyReward, claimDailyRewardWithSync, syncDailyRewardState, getConsecutiveDays, DailyReward } from '../utils/dailyRewards';
 import { checkAchievements, Achievement } from '../data/achievements';
 
 const DEFAULT_GAME_STATE: GameState = {
@@ -247,7 +248,9 @@ export default function GameContainer() {
     try {
       const cloudProgress = await loadProgressFromCloud(user.id);
       if (cloudProgress) {
-        const seenIds = gameState.seenQuestionIds;
+        const cloudSeenIds = cloudProgress.seen_question_ids
+          ? new Set<number | string>(cloudProgress.seen_question_ids)
+          : gameState.seenQuestionIds;
         setGameState(prev => ({
           ...prev,
           jade: cloudProgress.jade,
@@ -258,9 +261,15 @@ export default function GameContainer() {
           worldNumber: cloudProgress.world_number,
           gradeLevel: cloudProgress.grade_level,
           wordsLearned: new Set(cloudProgress.words_learned),
+          seenQuestionIds: cloudSeenIds,
+          streakShieldActive: cloudProgress.streak_shield_active ?? false,
+          streakShieldUsed: cloudProgress.streak_shield_used ?? false,
         }));
-        setLevels(generateLevel(cloudProgress.grade_level, 10, seenIds));
+        const srLevels = await generateLevelWithSpacedRepetition(cloudProgress.grade_level, 10, user.id);
+        setLevels(srLevels);
       }
+
+      await syncDailyRewardState(user.id);
 
       const cloudCompanions = await loadCompanionsFromCloud(user.id);
       if (cloudCompanions) {
@@ -284,7 +293,12 @@ export default function GameContainer() {
     saveProgress(jade, bestStreak, bossesDefeated, questionsAnswered, wordsLearned, worldNumber);
     if (user) {
       try {
-        await syncProgressToCloud(user.id, jade, currentStreak, bestStreak, questionsAnswered, bossesDefeated, worldNumber, gradeLevel, wordsLearned);
+        await syncProgressToCloud(
+          user.id, jade, currentStreak, bestStreak, questionsAnswered,
+          bossesDefeated, worldNumber, gradeLevel, wordsLearned,
+          gameState.streakShieldActive, gameState.streakShieldUsed,
+          Array.from(gameState.seenQuestionIds).map(String)
+        );
       } catch (error) {
         console.error('Error syncing progress:', error);
       }
@@ -299,7 +313,14 @@ export default function GameContainer() {
   const getJadeBonus = (): number => activeCompanion?.buffType === 'jade_boost' ? activeCompanion.buffValue : 0;
   const getComboMultiplier = (): number => activeCompanion?.buffType === 'combo_master' ? activeCompanion.buffValue : 1;
 
-  const handleNodeSelect = (node: MapNode) => {
+  const generateLevelsForUser = async (grade: number, count: number, seenIds: Set<number | string>): Promise<Level[]> => {
+    if (user) {
+      return generateLevelWithSpacedRepetition(grade, count, user.id);
+    }
+    return generateLevel(grade, count, seenIds);
+  };
+
+  const handleNodeSelect = async (node: MapNode) => {
     if (node.type === 'treasure') {
       const jadeReward = node.reward || 300;
       const newJade = gameState.jade + jadeReward;
@@ -324,7 +345,8 @@ export default function GameContainer() {
     const isListeningMode = node.type === 'blind';
     const isBoss = node.type === 'boss';
     const questionCount = isBoss ? 3 : 5;
-    setLevels(generateLevel(settings.gradeLevel, questionCount, gameState.seenQuestionIds));
+    const newLevels = await generateLevelsForUser(settings.gradeLevel, questionCount, gameState.seenQuestionIds);
+    setLevels(newLevels);
     autoSpeakDone.current = false;
     setCharRevealed(false);
     setShowHint(false);
@@ -536,10 +558,11 @@ export default function GameContainer() {
     }
   };
 
-  const handleLevelClearedContinue = () => {
+  const handleLevelClearedContinue = async () => {
     const newJade = gameState.jade + 500;
     const newWorldNumber = gameState.worldNumber + 1;
-    setLevels(generateLevel(settings.gradeLevel, 10, gameState.seenQuestionIds));
+    const newLevels = await generateLevelsForUser(settings.gradeLevel, 10, gameState.seenQuestionIds);
+    setLevels(newLevels);
     const newNodes = generateWorldNodes(newWorldNumber);
     setMapNodes(newNodes);
     saveMapState(newNodes, newWorldNumber);
@@ -561,7 +584,7 @@ export default function GameContainer() {
     }
   };
 
-  const handleSettingsChange = (newSettings: GameSettings) => {
+  const handleSettingsChange = async (newSettings: GameSettings) => {
     const oldGrade = settings.gradeLevel;
     const newGrade = newSettings.gradeLevel;
     const updatedSettings = { ...newSettings, audioSpeed: newSettings.audioSpeed || 0.75, bgmVolume: newSettings.bgmVolume ?? 0.1 };
@@ -571,7 +594,8 @@ export default function GameContainer() {
     if (oldGrade !== newGrade) {
       resetSessionTracker();
       const seenIds = new Set<number | string>();
-      setLevels(generateLevel(newGrade, 10, seenIds));
+      const newLevels = await generateLevelsForUser(newGrade, 10, seenIds);
+      setLevels(newLevels);
       const newNodes = generateWorldNodes(1);
       setMapNodes(newNodes);
       saveMapState(newNodes, 1);
@@ -674,8 +698,8 @@ export default function GameContainer() {
     }
   };
 
-  const handleDailyRewardClaim = () => {
-    const jadeReward = claimDailyReward();
+  const handleDailyRewardClaim = async () => {
+    const jadeReward = await claimDailyRewardWithSync(user?.id || null);
     if (jadeReward > 0) {
       const newJade = gameState.jade + jadeReward;
       setGameState(prev => ({ ...prev, jade: newJade }));
@@ -702,6 +726,7 @@ export default function GameContainer() {
         allRewards={dailyRewardData.allRewards}
       />
       <AchievementToast achievement={achievementToast} onDismiss={() => setAchievementToast(null)} />
+      {user && <SyncIndicator />}
     </>
   );
 

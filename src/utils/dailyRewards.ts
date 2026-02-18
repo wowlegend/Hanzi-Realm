@@ -1,3 +1,5 @@
+import { syncDailyRewardsToCloud, loadDailyRewardsFromCloud } from './cloudStorage';
+
 export interface DailyReward {
   day: number;
   jade: number;
@@ -93,6 +95,57 @@ export function claimDailyReward(): number {
   });
 
   return jadeReward;
+}
+
+export async function claimDailyRewardWithSync(userId: string | null): Promise<number> {
+  const reward = claimDailyReward();
+  if (reward > 0 && userId) {
+    const state = getState();
+    try {
+      await syncDailyRewardsToCloud(
+        userId,
+        state.lastClaimDate,
+        state.consecutiveDays,
+        state.claimedDays
+      );
+    } catch {
+      // local state is already saved
+    }
+  }
+  return reward;
+}
+
+export async function syncDailyRewardState(userId: string): Promise<void> {
+  const localState = getState();
+  const cloudData = await loadDailyRewardsFromCloud(userId);
+
+  if (cloudData) {
+    const cloudDate = cloudData.last_claim_date || '';
+    const localDate = localState.lastClaimDate || '';
+
+    if (cloudDate > localDate) {
+      const mergedState: DailyRewardState = {
+        lastClaimDate: cloudDate,
+        consecutiveDays: cloudData.consecutive_days,
+        claimedDays: cloudData.claimed_days,
+      };
+      saveState(mergedState);
+    } else if (localDate > cloudDate) {
+      await syncDailyRewardsToCloud(
+        userId,
+        localState.lastClaimDate,
+        localState.consecutiveDays,
+        localState.claimedDays
+      );
+    }
+  } else if (localState.lastClaimDate) {
+    await syncDailyRewardsToCloud(
+      userId,
+      localState.lastClaimDate,
+      localState.consecutiveDays,
+      localState.claimedDays
+    );
+  }
 }
 
 export function getConsecutiveDays(): number {

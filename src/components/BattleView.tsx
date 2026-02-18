@@ -217,7 +217,7 @@ export default function BattleView({
                   transition={{ duration: 0.5, repeat: Infinity }}
                   className="absolute -top-3 -right-3 text-3xl"
                 >
-                  {gameState.fireMode ? <Zap className="w-8 h-8 text-yellow-400" /> : '?'}
+                  {gameState.fireMode ? <Zap className="w-8 h-8 text-yellow-400" /> : <Zap className="w-6 h-6 text-orange-400" />}
                 </motion.div>
               )}
               <p className={`text-sm sm:text-base font-black drop-shadow ${
@@ -422,7 +422,7 @@ export default function BattleView({
                     </>
                   ) : (
                     <span className="block space-y-3">
-                      <span className="block text-white/90">{selectedOption?.explanation}</span>
+                      <span className="block text-white/90">{selectedOption?.explanation || 'Incorrect answer'}</span>
                       <span className="flex items-center gap-4 bg-black/30 rounded-xl p-3 border border-yellow-500/30">
                         <span className="text-4xl sm:text-5xl font-black text-yellow-300">{correctAnswer}</span>
                         <span className="block">

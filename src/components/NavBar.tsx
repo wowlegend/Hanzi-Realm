@@ -1,9 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Volume2, Settings as SettingsIcon, Gift, Trophy, Map,
-  BookOpen, RotateCcw, Swords, User,
+  BookOpen, RotateCcw, Swords,
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import UserProfile from './UserProfile';
 
 type ActiveView = 'map' | 'battle';
 
@@ -65,8 +65,6 @@ export default function NavBar({
   onShowMap,
   onAuthOpen,
 }: NavBarProps) {
-  const { user } = useAuth();
-
   return (
     <>
       <motion.nav
@@ -149,19 +147,7 @@ export default function NavBar({
             onClick={onSettingsOpen}
           />
 
-          <motion.button
-            onClick={onAuthOpen}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-colors ${
-              user
-                ? 'bg-green-600/30 border-green-500/30 hover:bg-green-600/40'
-                : 'bg-blue-600/30 border-blue-500/30 hover:bg-blue-600/40'
-            }`}
-          >
-            <User className={`w-4 h-4 ${user ? 'text-green-400' : 'text-blue-400'}`} />
-            {!user && <span className="text-blue-300 text-xs font-bold hidden lg:inline">Login</span>}
-          </motion.button>
+          <UserProfile onLoginClick={onAuthOpen} />
         </div>
       </motion.nav>
 
