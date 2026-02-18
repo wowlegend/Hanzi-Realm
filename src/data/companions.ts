@@ -1,95 +1,125 @@
-import { Companion, BuffType } from '../types';
+import { Companion, BuffType, CompanionRarity } from '../types';
 
 export const allCompanions: Companion[] = [
   {
-    id: 'panda',
-    name: 'Pixel Panda',
-    emoji: '\u{1F43C}',
-    avatarSeed: 'panda-companion-001',
-    rarity: 'common',
-    unlocked: false,
-    buffType: 'jade_boost',
-    buffValue: 15,
-  },
-  {
-    id: 'tiger',
-    name: 'Byte Tiger',
-    emoji: '\u{1F42F}',
-    avatarSeed: 'tiger-companion-002',
-    rarity: 'common',
-    unlocked: false,
-    buffType: 'jade_boost',
-    buffValue: 15,
-  },
-  {
-    id: 'rabbit',
-    name: 'Moon Rabbit',
-    emoji: '\u{1F430}',
-    avatarSeed: 'rabbit-companion-003',
+    id: 'noob-steve',
+    name: 'Noob Steve',
+    emoji: '\u{1F9D1}\u{200D}\u{1F527}',
+    avatarSeed: 'noob-steve-mc-001',
     rarity: 'common',
     unlocked: false,
     buffType: 'jade_boost',
     buffValue: 10,
   },
   {
-    id: 'monkey',
-    name: 'Code Monkey',
-    emoji: '\u{1F435}',
-    avatarSeed: 'monkey-companion-004',
+    id: 'roblox-rookie',
+    name: 'Roblox Rookie',
+    emoji: '\u{1F9CA}',
+    avatarSeed: 'roblox-rookie-rb-002',
+    rarity: 'common',
+    unlocked: false,
+    buffType: 'jade_boost',
+    buffValue: 12,
+  },
+  {
+    id: 'todo-panda',
+    name: 'Todo Panda',
+    emoji: '\u{1F43C}',
+    avatarSeed: 'todo-panda-jjk-003',
+    rarity: 'common',
+    unlocked: false,
+    buffType: 'jade_boost',
+    buffValue: 15,
+  },
+  {
+    id: 'creeper-buddy',
+    name: 'Creeper Buddy',
+    emoji: '\u{1F7E9}',
+    avatarSeed: 'creeper-buddy-mc-004',
     rarity: 'rare',
     unlocked: false,
     buffType: 'combo_master',
     buffValue: 1.5,
   },
   {
-    id: 'phoenix',
-    name: 'Fire Phoenix',
-    emoji: '\u{1F426}\u{200D}\u{1F525}',
-    avatarSeed: 'phoenix-companion-005',
+    id: 'dominus-rex',
+    name: 'Dominus Rex',
+    emoji: '\u{1F451}',
+    avatarSeed: 'dominus-rex-rb-005',
     rarity: 'rare',
     unlocked: false,
     buffType: 'jade_boost',
     buffValue: 25,
   },
   {
-    id: 'turtle',
-    name: 'Wise Turtle',
-    emoji: '\u{1F422}',
-    avatarSeed: 'turtle-companion-006',
+    id: 'divine-dog',
+    name: 'Divine Dog',
+    emoji: '\u{1F43A}',
+    avatarSeed: 'divine-dog-jjk-006',
     rarity: 'rare',
     unlocked: false,
     buffType: 'streak_shield',
     buffValue: 1,
   },
   {
-    id: 'dragon',
-    name: 'Azure Dragon',
-    emoji: '\u{1F409}',
-    avatarSeed: 'dragon-companion-007',
-    rarity: 'legendary',
+    id: 'ender-dragon',
+    name: 'Ender Dragon',
+    emoji: '\u{1F432}',
+    avatarSeed: 'ender-dragon-mc-007',
+    rarity: 'epic',
     unlocked: false,
     buffType: 'combo_master',
     buffValue: 2,
   },
   {
-    id: 'mech',
-    name: 'Mech Warrior',
-    emoji: '\u{1F916}',
-    avatarSeed: 'mech-companion-008',
+    id: 'korblox-knight',
+    name: 'Korblox Knight',
+    emoji: '\u{2694}\u{FE0F}',
+    avatarSeed: 'korblox-knight-rb-008',
+    rarity: 'epic',
+    unlocked: false,
+    buffType: 'jade_boost',
+    buffValue: 35,
+  },
+  {
+    id: 'mahoraga',
+    name: 'Mahoraga',
+    emoji: '\u{1F4AB}',
+    avatarSeed: 'mahoraga-jjk-009',
+    rarity: 'epic',
+    unlocked: false,
+    buffType: 'streak_shield',
+    buffValue: 2,
+  },
+  {
+    id: 'wither-king',
+    name: 'Wither King',
+    emoji: '\u{1F480}',
+    avatarSeed: 'wither-king-mc-010',
+    rarity: 'legendary',
+    unlocked: false,
+    buffType: 'combo_master',
+    buffValue: 3,
+  },
+  {
+    id: 'headless-horseman',
+    name: 'Headless Horseman',
+    emoji: '\u{1F3C7}',
+    avatarSeed: 'headless-horseman-rb-011',
     rarity: 'legendary',
     unlocked: false,
     buffType: 'jade_boost',
     buffValue: 50,
   },
   {
-    id: 'unicorn',
-    name: 'Cyber Unicorn',
-    emoji: '\u{1F984}',
-    avatarSeed: 'unicorn-companion-009',
+    id: 'sukuna',
+    name: 'Ryomen Sukuna',
+    emoji: '\u{1F525}',
+    avatarSeed: 'sukuna-jjk-012',
     rarity: 'legendary',
     unlocked: false,
     buffType: 'streak_shield',
-    buffValue: 2,
+    buffValue: 3,
   },
 ];
 
@@ -99,6 +129,8 @@ export const getRarityColor = (rarity: string): string => {
       return 'text-gray-400 border-gray-500';
     case 'rare':
       return 'text-blue-400 border-blue-500';
+    case 'epic':
+      return 'text-rose-400 border-rose-500';
     case 'legendary':
       return 'text-yellow-400 border-yellow-500';
     default:
@@ -106,14 +138,27 @@ export const getRarityColor = (rarity: string): string => {
   }
 };
 
+export const getRarityGlow = (rarity: string): string => {
+  switch (rarity) {
+    case 'epic':
+      return 'shadow-[0_0_25px_rgba(244,63,94,0.5)]';
+    case 'legendary':
+      return 'shadow-[0_0_30px_rgba(255,215,0,0.6)]';
+    default:
+      return '';
+  }
+};
+
 export const getRarityChance = (rarity: string): number => {
   switch (rarity) {
     case 'common':
-      return 60;
+      return 50;
     case 'rare':
-      return 30;
+      return 28;
+    case 'epic':
+      return 15;
     case 'legendary':
-      return 10;
+      return 7;
     default:
       return 0;
   }
@@ -124,15 +169,21 @@ export const getBuffDescription = (buffType: BuffType, buffValue: number): strin
     case 'jade_boost':
       return `+${buffValue}% Jade on wins`;
     case 'streak_shield':
-      return `Streak Shield (${buffValue}x per session)`;
+      return buffValue >= 3 ? `Immortal Streak Shield` : `Streak Shield (${buffValue}x per session)`;
     case 'combo_master':
-      return `${buffValue}x faster streak multiplier`;
+      return `${buffValue}x streak multiplier`;
     default:
       return '';
   }
 };
 
-export const getRandomCompanionByRarity = (rarity: 'common' | 'rare' | 'legendary'): Companion => {
+export const getRandomCompanionByRarity = (rarity: CompanionRarity): Companion => {
   const filtered = allCompanions.filter(c => c.rarity === rarity);
   return filtered[Math.floor(Math.random() * filtered.length)];
+};
+
+export const getCompanionTheme = (id: string): 'minecraft' | 'roblox' | 'jjk' => {
+  if (id.includes('steve') || id.includes('creeper') || id.includes('ender') || id.includes('wither')) return 'minecraft';
+  if (id.includes('roblox') || id.includes('dominus') || id.includes('korblox') || id.includes('headless')) return 'roblox';
+  return 'jjk';
 };

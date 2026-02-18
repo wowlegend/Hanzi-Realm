@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Volume2, Settings as SettingsIcon, Gift, Trophy, BookOpen, RotateCcw } from 'lucide-react';
-import { GameSettings, PlayerInventory, MapNode, Companion, SessionStats } from '../types';
+import { GameSettings, PlayerInventory, MapNode, Companion, SessionStats, GameState } from '../types';
 import WorldMap from './WorldMap';
 import GradeBackground from './GradeBackground';
 import MusicManager from './MusicManager';
@@ -24,6 +24,7 @@ interface MapViewProps {
   activeCompanion: Companion | null;
   companionHappy: boolean;
   sessionStats: SessionStats;
+  gameState?: GameState;
   debugMessage: string;
   debugIsError: boolean;
   isSettingsOpen: boolean;
@@ -63,6 +64,7 @@ export default function MapView({
   activeCompanion,
   companionHappy,
   sessionStats,
+  gameState,
   debugMessage,
   debugIsError,
   isSettingsOpen,
@@ -187,6 +189,7 @@ export default function MapView({
         isOpen={isReportOpen}
         onClose={onReportClose}
         stats={sessionStats}
+        gameState={gameState}
       />
 
       <WordBook

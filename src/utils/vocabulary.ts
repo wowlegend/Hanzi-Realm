@@ -66,13 +66,12 @@ export function lookupMultiple(chars: string[]): VocabEntry[] {
   return results;
 }
 
-export function getVocabByGrade(chars: string[]): Map<number, VocabEntry[]> {
+export function getVocabByGrade(chars: string[]): Record<number, VocabEntry[]> {
   const entries = lookupMultiple(chars);
-  const byGrade = new Map<number, VocabEntry[]>();
+  const byGrade: Record<number, VocabEntry[]> = {};
   for (const e of entries) {
-    const list = byGrade.get(e.grade) || [];
-    list.push(e);
-    byGrade.set(e.grade, list);
+    if (!byGrade[e.grade]) byGrade[e.grade] = [];
+    byGrade[e.grade].push(e);
   }
   return byGrade;
 }

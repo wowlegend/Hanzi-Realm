@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import Spline from '@splinetool/react-spline';
 import confetti from 'canvas-confetti';
 import { Companion } from '../types';
-import { allCompanions, getRarityColor, getRarityChance, getBuffDescription } from '../data/companions';
+import { allCompanions, getRarityColor, getRarityGlow, getRarityChance, getBuffDescription, getCompanionTheme } from '../data/companions';
 
 interface GachaModalProps {
   isOpen: boolean;
@@ -12,6 +12,12 @@ interface GachaModalProps {
   jade: number;
   onRoll: (companion: Companion) => void;
 }
+
+const THEME_LABELS: Record<string, string> = {
+  minecraft: 'Minecraft',
+  roblox: 'Roblox',
+  jjk: 'Jujutsu Kaisen',
+};
 
 export default function GachaModal({ isOpen, onClose, jade, onRoll }: GachaModalProps) {
   const [isRolling, setIsRolling] = useState(false);
@@ -26,11 +32,17 @@ export default function GachaModal({ isOpen, onClose, jade, onRoll }: GachaModal
 
     setTimeout(() => {
       const random = Math.random() * 100;
-      let selectedRarity = 'common';
+      let selectedRarity: 'common' | 'rare' | 'epic' | 'legendary' = 'common';
 
-      if (random < getRarityChance('legendary')) {
+      const legendaryThreshold = getRarityChance('legendary');
+      const epicThreshold = legendaryThreshold + getRarityChance('epic');
+      const rareThreshold = epicThreshold + getRarityChance('rare');
+
+      if (random < legendaryThreshold) {
         selectedRarity = 'legendary';
-      } else if (random < getRarityChance('legendary') + getRarityChance('rare')) {
+      } else if (random < epicThreshold) {
+        selectedRarity = 'epic';
+      } else if (random < rareThreshold) {
         selectedRarity = 'rare';
       }
 
@@ -42,18 +54,11 @@ export default function GachaModal({ isOpen, onClose, jade, onRoll }: GachaModal
       setIsRolling(false);
 
       if (selectedRarity === 'legendary') {
-        confetti({
-          particleCount: 200,
-          spread: 100,
-          origin: { y: 0.5 },
-          colors: ['#ffd700', '#ffed4e', '#fff'],
-        });
+        confetti({ particleCount: 300, spread: 120, origin: { y: 0.5 }, colors: ['#ffd700', '#ffed4e', '#fff', '#ff6b35'] });
+      } else if (selectedRarity === 'epic') {
+        confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 }, colors: ['#f43e5e', '#ff8fa3', '#fff'] });
       } else if (selectedRarity === 'rare') {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          colors: ['#4db8ff', '#80d0ff', '#fff'],
-        });
+        confetti({ particleCount: 100, spread: 70, colors: ['#4db8ff', '#80d0ff', '#fff'] });
       }
 
       onRoll(newCompanion);
@@ -98,25 +103,25 @@ export default function GachaModal({ isOpen, onClose, jade, onRoll }: GachaModal
                 </Suspense>
               </div>
 
-              <h2 className="text-4xl font-black text-white mb-2">
-                MYSTERY BLOCK
-              </h2>
-              <p className="text-gray-300 mb-6">
-                Open a block to unlock a rare companion!
-              </p>
+              <h2 className="text-4xl font-black text-white mb-2">MYSTERY BLOCK</h2>
+              <p className="text-gray-300 mb-6">Unlock Minecraft, Roblox & JJK companions!</p>
 
-              <div className="flex justify-center gap-4 mb-8">
-                <div className="voxel-card border-gray-600 p-4 text-center">
-                  <p className="text-gray-300 text-sm">Common</p>
-                  <p className="text-2xl font-bold text-gray-400">60%</p>
+              <div className="flex justify-center gap-3 mb-8 flex-wrap">
+                <div className="voxel-card border-gray-600 p-3 text-center min-w-[70px]">
+                  <p className="text-gray-300 text-xs">Common</p>
+                  <p className="text-lg font-bold text-gray-400">50%</p>
                 </div>
-                <div className="voxel-card border-blue-600 p-4 text-center">
-                  <p className="text-gray-300 text-sm">Rare</p>
-                  <p className="text-2xl font-bold text-blue-400">30%</p>
+                <div className="voxel-card border-blue-600 p-3 text-center min-w-[70px]">
+                  <p className="text-gray-300 text-xs">Rare</p>
+                  <p className="text-lg font-bold text-blue-400">28%</p>
                 </div>
-                <div className="voxel-card border-yellow-600 p-4 text-center">
-                  <p className="text-gray-300 text-sm">Legendary</p>
-                  <p className="text-2xl font-bold text-yellow-400">10%</p>
+                <div className="voxel-card border-rose-600 p-3 text-center min-w-[70px]">
+                  <p className="text-gray-300 text-xs">Epic</p>
+                  <p className="text-lg font-bold text-rose-400">15%</p>
+                </div>
+                <div className="voxel-card border-yellow-600 p-3 text-center min-w-[70px]">
+                  <p className="text-gray-300 text-xs">Legend</p>
+                  <p className="text-lg font-bold text-yellow-400">7%</p>
                 </div>
               </div>
 
@@ -134,12 +139,12 @@ export default function GachaModal({ isOpen, onClose, jade, onRoll }: GachaModal
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="inline-block"
+                      className="inline-block text-3xl"
                     >
-                      🎁
+                      ?
                     </motion.div>
                   ) : (
-                    `OPEN FOR ${GACHA_COST} 💎`
+                    `OPEN FOR ${GACHA_COST} Jade`
                   )}
                 </motion.button>
               )}
@@ -149,23 +154,26 @@ export default function GachaModal({ isOpen, onClose, jade, onRoll }: GachaModal
                   initial={{ scale: 0, rotateY: 0 }}
                   animate={{ scale: 1, rotateY: 360 }}
                   transition={{ duration: 0.8 }}
-                  className={`voxel-card p-8 ${getRarityColor(pulledCompanion.rarity)}`}
+                  className={`voxel-card p-8 ${getRarityColor(pulledCompanion.rarity)} ${getRarityGlow(pulledCompanion.rarity)}`}
                 >
                   <div className="text-8xl mb-4">{pulledCompanion.emoji}</div>
-                  <h3 className={`text-3xl font-black mb-2 ${getRarityColor(pulledCompanion.rarity).split(' ')[0]}`}>
+                  <h3 className={`text-3xl font-black mb-1 ${getRarityColor(pulledCompanion.rarity).split(' ')[0]}`}>
                     {pulledCompanion.name}
                   </h3>
+                  <p className="text-xs text-gray-500 mb-2 uppercase tracking-widest">
+                    {THEME_LABELS[getCompanionTheme(pulledCompanion.id)]} Series
+                  </p>
                   <p className="text-sm text-green-400 mb-2 font-bold">
                     {getBuffDescription(pulledCompanion.buffType, pulledCompanion.buffValue)}
                   </p>
-                  <p className="text-xl text-gray-300 uppercase tracking-wide">
+                  <p className="text-xl text-gray-300 uppercase tracking-wide font-black">
                     {pulledCompanion.rarity}
                   </p>
                 </motion.div>
               )}
 
               <p className="text-gray-400 mt-6">
-                Your Jade: <span className="text-[#ffd700] font-bold">{jade} 💎</span>
+                Your Jade: <span className="text-[#ffd700] font-bold">{jade}</span>
               </p>
             </div>
           </motion.div>

@@ -342,6 +342,16 @@ export default function GameContainer() {
     setShowMap(false);
   };
 
+  const handleSentenceSubmit = (answer: string) => {
+    const isCorrect = answer === correctAnswer;
+    const fakeOption: AnswerOption = {
+      value: answer,
+      pinyin: '',
+      explanation: isCorrect ? 'Perfect sentence order!' : `The correct order was: ${correctAnswer}`,
+    };
+    handleOptionClick(fakeOption);
+  };
+
   const handleOptionClick = async (option: AnswerOption) => {
     if (gameState.showFeedback) return;
     sfxManager.play('click');
@@ -681,6 +691,7 @@ export default function GameContainer() {
           activeCompanion={activeCompanion}
           companionHappy={companionHappy}
           sessionStats={sessionStats}
+          gameState={gameState}
           debugMessage={debugMessage}
           debugIsError={debugIsError}
           isSettingsOpen={isSettingsOpen}
@@ -760,6 +771,7 @@ export default function GameContainer() {
         onInventoryChange={handleInventoryChange}
         onGachaRoll={handleGachaRoll}
         onDebugClose={() => setDebugMessage('')}
+        onSentenceSubmit={handleSentenceSubmit}
         getJadeBonus={getJadeBonus}
       />
       <LevelClearedModal isOpen={isLevelClearedOpen} worldNumber={gameState.worldNumber} jadeBonus={500} onContinue={handleLevelClearedContinue} />

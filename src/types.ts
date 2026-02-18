@@ -40,6 +40,8 @@ export interface Level {
   options: AnswerOption[];
   hint?: string;
   distractorType?: 'visual' | 'homophone' | 'shape-similar';
+  questionType?: QuestionType;
+  sentenceWords?: string[];
 }
 
 export interface CharOption {
@@ -58,7 +60,7 @@ export interface LegacyLevel {
   correct_explanation: string;
 }
 
-export type CompanionRarity = 'common' | 'rare' | 'legendary';
+export type CompanionRarity = 'common' | 'rare' | 'epic' | 'legendary';
 export type BuffType = 'jade_boost' | 'streak_shield' | 'combo_master';
 
 export interface Companion {
@@ -82,6 +84,8 @@ export interface MapNode {
   position: { x: number; y: number };
   reward?: number;
 }
+
+export type QuestionType = 'fill-blank' | 'sentence-order' | 'radical-detective';
 
 export type GameMode = 'standard' | 'listening';
 export type MusicState = 'menu' | 'map' | 'battle' | 'boss';

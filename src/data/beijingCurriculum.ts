@@ -1,6 +1,8 @@
 import { Level, PinyinChar, ContentBlock } from '../types';
 import { grade1Extra } from './grade1Extra';
 import { grade2Extra } from './grade2Extra';
+import { grade3Extra } from './grade3Extra';
+import { grade4Extra } from './grade4Extra';
 
 function createPinyinSegments(chars: string[], pinyins: string[], missingIndex?: number): PinyinChar[] {
   return chars.map((char, i) => ({
@@ -883,8 +885,8 @@ const grade6Levels: Level[] = [
 export const beijingCurriculum: Record<number, Level[]> = {
   1: [...grade1Levels, ...grade1Extra],
   2: [...grade2Levels, ...grade2Extra],
-  3: grade3Levels,
-  4: grade4Levels,
+  3: [...grade3Levels, ...grade3Extra],
+  4: [...grade4Levels, ...grade4Extra],
   5: grade5Levels,
   6: grade6Levels,
 };

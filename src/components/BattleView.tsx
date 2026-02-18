@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Volume2, Settings as SettingsIcon, Loader, Gift, Trophy, Map, Zap, Lightbulb } from 'lucide-react';
+import { Volume2, Settings as SettingsIcon, Loader, Gift, Trophy, Map, Zap, Lightbulb, Search } from 'lucide-react';
 import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats, MusicState, AnswerOption } from '../types';
 import { getBuffDescription } from '../data/companions';
 import { Boss } from '../data/bosses';
@@ -9,6 +9,7 @@ import MusicManager from './MusicManager';
 import BossBattle from './BossBattle';
 import NarratorAvatar from './NarratorAvatar';
 import { ContentBlockRenderer } from './RubyText';
+import SentenceOrderView from './SentenceOrderView';
 import SettingsModal from './SettingsModal';
 import GachaModal from './GachaModal';
 import ReportCard from './ReportCard';
@@ -60,6 +61,7 @@ interface BattleViewProps {
   onInventoryChange: (inventory: PlayerInventory) => void;
   onGachaRoll: (companion: Companion) => void;
   onDebugClose: () => void;
+  onSentenceSubmit?: (answer: string) => void;
   getJadeBonus: () => number;
 }
 
@@ -106,6 +108,7 @@ export default function BattleView({
   onInventoryChange,
   onGachaRoll,
   onDebugClose,
+  onSentenceSubmit,
   getJadeBonus,
 }: BattleViewProps) {
   const [hoveredOption, setHoveredOption] = useState<string | null>(null);
@@ -358,7 +361,24 @@ export default function BattleView({
               </div>
             </div>
 
-            <div className={`${isBossMode ? 'space-y-2 mb-3' : 'space-y-3 sm:space-y-4 mb-6'}`}>
+            {currentLevel.questionType === 'sentence-order' && !gameState.showFeedback && onSentenceSubmit && (
+              <div className="mb-6">
+                <SentenceOrderView
+                  level={currentLevel}
+                  onSubmit={onSentenceSubmit}
+                  disabled={gameState.showFeedback}
+                />
+              </div>
+            )}
+
+            {currentLevel.questionType === 'radical-detective' && !gameState.showFeedback && (
+              <div className="mb-4 bg-gradient-to-r from-amber-900/30 to-orange-900/30 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-3">
+                <Search className="w-6 h-6 text-amber-400 flex-shrink-0" />
+                <p className="text-amber-200 font-bold text-sm">Find the character with the correct radical!</p>
+              </div>
+            )}
+
+            <div className={`${isBossMode ? 'space-y-2 mb-3' : 'space-y-3 sm:space-y-4 mb-6'} ${currentLevel.questionType === 'sentence-order' && !gameState.showFeedback ? 'hidden' : ''}`}>
               {currentLevel.options.map((option) => {
                 const isSelected = gameState.selectedOption === option.value;
                 const isCorrectAnswer = option.value === correctAnswer;
@@ -517,6 +537,7 @@ export default function BattleView({
           isOpen={isReportOpen}
           onClose={onReportClose}
           stats={sessionStats}
+          gameState={gameState}
         />
 
         <CompanionDisplay companion={activeCompanion} isHappy={companionHappy} />

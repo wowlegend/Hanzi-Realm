@@ -60,9 +60,10 @@ export default function LootBoxModal({ isOpen, onClose, onReward }: LootBoxModal
 
         if (roll < 40) {
           const rarityRoll = Math.random() * 100;
-          let rarity: 'common' | 'rare' | 'legendary';
-          if (rarityRoll < 60) rarity = 'common';
-          else if (rarityRoll < 90) rarity = 'rare';
+          let rarity: 'common' | 'rare' | 'epic' | 'legendary';
+          if (rarityRoll < 45) rarity = 'common';
+          else if (rarityRoll < 75) rarity = 'rare';
+          else if (rarityRoll < 92) rarity = 'epic';
           else rarity = 'legendary';
           const companion = getRandomCompanionByRarity(rarity);
           newReward = { type: 'companion', companion: { ...companion, unlocked: true } };
@@ -224,7 +225,7 @@ export default function LootBoxModal({ isOpen, onClose, onReward }: LootBoxModal
                     >
                       {reward.companion.emoji}
                     </motion.div>
-                    <p className={`text-2xl font-black mb-2 ${getRarityColor(reward.companion.rarity)}`}>
+                    <p className={`text-2xl font-black mb-2 ${getRarityColor(reward.companion.rarity).split(' ')[0]}`}>
                       {reward.companion.name}
                     </p>
                     <p className="text-sm text-white/80">

@@ -1,6 +1,7 @@
 import { Level } from '../types';
 import { getLevelsForGrade, getFullSentenceFromLevel } from './beijingCurriculum';
 import { generateSemanticLevels } from './semanticGenerator';
+import { generateSentenceOrderLevels, generateRadicalDetectiveLevels } from './questionGenerators';
 import {
   getEligibleQuestions,
   selectQuestionsWithSpacedRepetition,
@@ -29,7 +30,9 @@ export function generateLevel(
 ): Level[] {
   const handcrafted = getLevelsForGrade(grade);
   const semantic = grade >= 2 ? generateSemanticLevels(grade, 20) : [];
-  const allLevels = [...handcrafted, ...semantic];
+  const sentenceOrder = grade >= 2 ? generateSentenceOrderLevels(grade, 5) : [];
+  const radicalDetective = generateRadicalDetectiveLevels(grade, 5);
+  const allLevels = [...handcrafted, ...semantic, ...sentenceOrder, ...radicalDetective];
 
   const recentIds = sessionTracker.getRecentIds();
   const combinedExclusions = new Set([...seenIds, ...recentIds]);
