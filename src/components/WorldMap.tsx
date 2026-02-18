@@ -4,6 +4,7 @@ import { Swords, Headphones, Gem, Skull, Check, Lock, Sparkles } from 'lucide-re
 import { MapNode, NodeType } from '../types';
 import { generatePathPoints } from '../utils/mapGenerator';
 import { getBossForWorld, getWorldTheme } from '../data/bosses';
+import BossMonsterSprite from './BossMonsterSprite';
 
 interface WorldMapProps {
   nodes: MapNode[];
@@ -149,10 +150,8 @@ export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: Wor
               rotate: [0, 3, -3, 0],
             }}
             transition={{ duration: 3, repeat: Infinity }}
-            className="text-3xl sm:text-4xl"
-            style={{ color: boss.color, textShadow: `0 0 24px ${boss.color}, 0 0 48px ${boss.color}40` }}
           >
-            {boss.character}
+            <BossMonsterSprite bossId={boss.id} color={boss.color} attackColor={boss.attackColor} isAttacking={false} size={48} />
           </motion.div>
           <div className="text-right">
             <p className="text-white font-bold text-sm">{boss.name}</p>

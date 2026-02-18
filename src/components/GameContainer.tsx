@@ -456,9 +456,21 @@ export default function GameContainer() {
     setShake(true);
     setTimeout(() => setShake(false), 500);
     if (bossTimerRef.current) { clearInterval(bossTimerRef.current); bossTimerRef.current = null; }
+    if (lootBoxTimeoutRef.current) { clearTimeout(lootBoxTimeoutRef.current); lootBoxTimeoutRef.current = null; }
     setCurrentBoss(null);
     setIsBossMode(false);
-    setGameState(prev => ({ ...prev, currentStreak: 0, selectedOption: null, isCorrect: false, showFeedback: true }));
+    setAwaitingLoot(false);
+    setShowMap(true);
+    setGameState(prev => ({
+      ...prev,
+      currentStreak: 0,
+      selectedOption: null,
+      isCorrect: null,
+      showFeedback: false,
+      currentNodeId: null,
+      nodeQuestionsTotal: 0,
+      nodeQuestionsAnswered: 0,
+    }));
   };
 
   const handleNext = () => {
@@ -466,19 +478,26 @@ export default function GameContainer() {
     setShowHint(false);
 
     if (gameState.currentNodeId) {
+      const currentNode = mapNodes.find(n => n.id === gameState.currentNodeId);
+      const isBossNode = currentNode?.type === 'boss';
+      const bossDefeated = gameState.bossHp <= 0 && gameState.bossMaxHp > 0;
       const hasMoreQuestions = nextIndex < levels.length && gameState.nodeQuestionsAnswered < gameState.nodeQuestionsTotal;
-      const isBossDefeated = isBossMode && gameState.bossHp <= 0;
 
-      if (hasMoreQuestions && !isBossDefeated) {
+      if (hasMoreQuestions && !bossDefeated && isBossMode) {
         autoSpeakDone.current = false;
         setCharRevealed(false);
         setGameState(prev => ({ ...prev, currentLevelIndex: nextIndex, selectedOption: null, isCorrect: null, showFeedback: false }));
         return;
       }
 
-      const currentNode = mapNodes.find(n => n.id === gameState.currentNodeId);
-      const isBossNode = currentNode?.type === 'boss';
-      const shouldCompleteNode = !isBossNode || isBossDefeated || gameState.isCorrect;
+      if (!isBossNode && hasMoreQuestions) {
+        autoSpeakDone.current = false;
+        setCharRevealed(false);
+        setGameState(prev => ({ ...prev, currentLevelIndex: nextIndex, selectedOption: null, isCorrect: null, showFeedback: false }));
+        return;
+      }
+
+      const shouldCompleteNode = !isBossNode || bossDefeated || (gameState.isCorrect === true);
 
       const updatedNodes = mapNodes.map(n => {
         if (n.id === gameState.currentNodeId && shouldCompleteNode) return { ...n, status: 'completed' as const };
