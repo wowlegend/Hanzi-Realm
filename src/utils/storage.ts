@@ -158,3 +158,12 @@ export const loadMapState = (): { nodes: MapNode[]; worldId: number } | null => 
   }
   return null;
 };
+
+export const isFirstLaunch = (): boolean => {
+  return !localStorage.getItem(SETTINGS_KEY);
+};
+
+export const markLaunched = (): void => {
+  const settings = loadSettings();
+  saveSettings(settings);
+};

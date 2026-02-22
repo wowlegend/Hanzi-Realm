@@ -2,14 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import { generateLevel, generateLevelWithSpacedRepetition, getLevelFullSentence, getCorrectAnswerFromLevel, markQuestionAnswered, resetSessionTracker } from '../data/questionBank';
 import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats, MapNode, MusicState, LootReward, AnswerOption } from '../types';
-import { saveProgress, loadProgress, saveInventory, loadInventory, saveSettings, loadSettings, addWordLearned, saveMapState, loadMapState } from '../utils/storage';
-import { syncProgressToCloud, syncCompanionsToCloud, syncMapStateToCloud, recordCharacterAttempt, loadProgressFromCloud, loadCompanionsFromCloud, loadSettingsFromCloud, loadMapStateFromCloud } from '../utils/cloudStorage';
+import { saveProgress, loadProgress, saveInventory, loadInventory, saveSettings, loadSettings, addWordLearned, saveMapState, loadMapState, isFirstLaunch } from '../utils/storage';
+import { syncProgressToCloud, syncCompanionsToCloud, syncMapStateToCloud, recordCharacterAttempt, loadProgressFromCloud, loadCompanionsFromCloud, loadSettingsFromCloud, loadMapStateFromCloud, syncLeaderboardEntry } from '../utils/cloudStorage';
 import { recordQuestionAttempt } from '../utils/spacedRepetition';
 import { speakChinese, setDebugCallback } from '../utils/audio';
 import { sfxManager } from '../utils/sfx';
 import { AUDIO_DEFAULTS } from '../utils/constants';
 import { generateWorldNodes } from '../utils/mapGenerator';
-import { getBossForWorld, Boss } from '../data/bosses';
+import { getBossForWorld, Boss, getBossTier, BossTier, getNewGamePlusLevel } from '../data/bosses';
 import { useAuth } from '../contexts/AuthContext';
 import MapView from './MapView';
 import BattleView from './BattleView';
@@ -20,6 +20,9 @@ import AchievementToast from './AchievementToast';
 import JadeAnimation from './JadeAnimation';
 import StreakCelebration from './StreakCelebration';
 import SyncIndicator from './SyncIndicator';
+import GradeSelectModal from './GradeSelectModal';
+import TutorialOverlay, { isTutorialDone } from './TutorialOverlay';
+import NewPlayerChecklist, { markChecklistTask } from './NewPlayerChecklist';
 import { checkDailyReward, claimDailyRewardWithSync, syncDailyRewardState, getConsecutiveDays, DailyReward } from '../utils/dailyRewards';
 import { checkAchievements, Achievement } from '../data/achievements';
 
@@ -101,9 +104,13 @@ export default function GameContainer() {
   const [isFlashcardOpen, setIsFlashcardOpen] = useState(false);
 
   const [isBossMode, setIsBossMode] = useState(false);
-  const [bossTimer, setBossTimer] = useState(15);
+  const [bossTimer, setBossTimer] = useState(45);
   const [currentBoss, setCurrentBoss] = useState<Boss | null>(null);
+  const [currentBossTier, setCurrentBossTier] = useState<BossTier | null>(null);
 
+  const [isGradeSelectOpen, setIsGradeSelectOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [isDailyRewardOpen, setIsDailyRewardOpen] = useState(false);
   const [dailyRewardData, setDailyRewardData] = useState<{ reward: DailyReward | null; allRewards: DailyReward[] }>({ reward: null, allRewards: [] });
   const [achievementToast, setAchievementToast] = useState<Achievement | null>(null);
@@ -159,11 +166,12 @@ export default function GameContainer() {
   useEffect(() => {
     if (isBossMode && !gameState.showFeedback) {
       setMusicState('boss');
+      const defaultTimer = currentBossTier?.timer ?? 45;
       bossTimerRef.current = setInterval(() => {
         setBossTimer(prev => {
           if (prev <= 1) {
             handleBossTimeout();
-            return 15;
+            return defaultTimer;
           }
           return prev - 1;
         });
@@ -173,7 +181,7 @@ export default function GameContainer() {
         clearInterval(bossTimerRef.current);
         bossTimerRef.current = null;
       }
-      setBossTimer(15);
+      setBossTimer(currentBossTier?.timer ?? 45);
     } else {
       if (bossTimerRef.current) {
         clearInterval(bossTimerRef.current);
@@ -184,7 +192,7 @@ export default function GameContainer() {
       if (bossTimerRef.current) clearInterval(bossTimerRef.current);
       if (lootBoxTimeoutRef.current) clearTimeout(lootBoxTimeoutRef.current);
     };
-  }, [isBossMode, gameState.showFeedback]);
+  }, [isBossMode, gameState.showFeedback, currentBossTier]);
 
   useEffect(() => {
     if (!showMap && !isBossMode) setMusicState('battle');
@@ -199,10 +207,17 @@ export default function GameContainer() {
   }, [gameState.gameMode, showMap, gameState.showFeedback, gameState.currentLevelIndex]);
 
   const loadGameData = async () => {
+    const firstLaunch = isFirstLaunch();
     const progress = loadProgress();
     const inv = loadInventory();
     const sett = loadSettings();
     const savedMap = loadMapState();
+
+    if (firstLaunch) {
+      setIsGradeSelectOpen(true);
+    } else if (!isTutorialDone()) {
+      setTimeout(() => setIsTutorialOpen(true), 800);
+    }
 
     const gradeToUse = sett.gradeLevel || 1;
     const seenIds = new Set<number | string>();
@@ -299,6 +314,8 @@ export default function GameContainer() {
           gameState.streakShieldActive, gameState.streakShieldUsed,
           Array.from(gameState.seenQuestionIds).map(String)
         );
+        const displayName = user.email?.split('@')[0] || 'Player';
+        syncLeaderboardEntry(user.id, displayName, jade, bestStreak, bossesDefeated, new Set(wordsLearned).size, worldNumber, gradeLevel);
       } catch (error) {
         console.error('Error syncing progress:', error);
       }
@@ -344,6 +361,7 @@ export default function GameContainer() {
 
     const isListeningMode = node.type === 'blind';
     const isBoss = node.type === 'boss';
+    const tier = isBoss ? getBossTier(gameState.worldNumber) : null;
     const questionCount = isBoss ? 3 : 5;
     const newLevels = await generateLevelsForUser(settings.gradeLevel, questionCount, gameState.seenQuestionIds);
     setLevels(newLevels);
@@ -360,14 +378,15 @@ export default function GameContainer() {
       showFeedback: false,
       nodeQuestionsTotal: questionCount,
       nodeQuestionsAnswered: 0,
-      bossHp: isBoss ? 3 : 0,
-      bossMaxHp: isBoss ? 3 : 0,
+      bossHp: isBoss ? (tier?.hp ?? 3) : 0,
+      bossMaxHp: isBoss ? (tier?.hp ?? 3) : 0,
     }));
 
-    if (isBoss) {
+    if (isBoss && tier) {
       setCurrentBoss(getBossForWorld(gameState.worldNumber));
+      setCurrentBossTier(tier);
       setIsBossMode(true);
-      setBossTimer(45);
+      setBossTimer(tier.timer);
     }
     setShowMap(false);
   };
@@ -404,7 +423,7 @@ export default function GameContainer() {
       }
       addWordLearned(correctAnswer);
 
-      const baseReward = isBossMode ? 800 : 100;
+      const baseReward = isBossMode ? (currentBossTier?.jadePerHit ?? 800) : 100;
       const jadeReward = Math.floor(baseReward * (1 + getJadeBonus() / 100));
       const streakIncrement = Math.ceil(getComboMultiplier());
       if (gameState.currentStreak + streakIncrement >= 3) sfxManager.play('combo');
@@ -448,6 +467,13 @@ export default function GameContainer() {
       }
       markQuestionAnswered(currentLevel.id);
 
+      const clBattle = markChecklistTask('first_battle');
+      if (clBattle.wasNew) window.dispatchEvent(new Event('checklist_update'));
+      if (newStreak >= 3) {
+        const clStreak = markChecklistTask('first_streak');
+        if (clStreak.wasNew) window.dispatchEvent(new Event('checklist_update'));
+      }
+
       runAchievementCheck({
         questionsAnswered: gameState.questionsAnswered + 1,
         bestStreak: newBestStreak,
@@ -458,6 +484,8 @@ export default function GameContainer() {
       });
 
       if (isBossMode && newBossHp <= 0) {
+        const clBoss = markChecklistTask('defeat_boss');
+        if (clBoss.wasNew) window.dispatchEvent(new Event('checklist_update'));
         if (bossTimerRef.current) { clearInterval(bossTimerRef.current); bossTimerRef.current = null; }
         if (lootBoxTimeoutRef.current) clearTimeout(lootBoxTimeoutRef.current);
         setCurrentBoss(null);
@@ -606,6 +634,8 @@ export default function GameContainer() {
 
   const handleGachaRoll = (companion: Companion) => {
     sfxManager.play('gacha');
+    const clGacha = markChecklistTask('roll_gacha');
+    if (clGacha.wasNew) window.dispatchEvent(new Event('checklist_update'));
     const updatedCompanions = [...inventory.companions];
     const existingIndex = updatedCompanions.findIndex(c => c.id === companion.id);
     if (existingIndex >= 0) updatedCompanions[existingIndex] = companion;
@@ -707,6 +737,32 @@ export default function GameContainer() {
     }
     setIsDailyRewardOpen(false);
     runAchievementCheck({ jade: gameState.jade + jadeReward });
+    const clDaily = markChecklistTask('daily_reward');
+    if (clDaily.wasNew) window.dispatchEvent(new Event('checklist_update'));
+  };
+
+  const handleGradeSelect = async (grade: number) => {
+    setIsGradeSelectOpen(false);
+    const newSettings = { ...settings, gradeLevel: grade };
+    setSettings(newSettings);
+    saveSettings(newSettings);
+    resetSessionTracker();
+    const seenIds = new Set<number | string>();
+    const newLevels = await generateLevelsForUser(grade, 10, seenIds);
+    setLevels(newLevels);
+    setGameState(prev => ({ ...prev, gradeLevel: grade, seenQuestionIds: seenIds }));
+    markChecklistTask('select_grade');
+    window.dispatchEvent(new Event('checklist_update'));
+    setTimeout(() => setIsTutorialOpen(true), 400);
+  };
+
+  const handleChecklistReward = (amount: number) => {
+    const newJade = gameState.jade + amount;
+    setGameState(prev => ({ ...prev, jade: newJade }));
+    syncProgress(newJade, gameState.currentStreak, gameState.bestStreak, gameState.questionsAnswered, gameState.bossesDefeated, gameState.worldNumber, settings.gradeLevel, Array.from(gameState.wordsLearned));
+    setJadeAnimAmount(amount);
+    if (jadeAnimTimer.current) clearTimeout(jadeAnimTimer.current);
+    jadeAnimTimer.current = setTimeout(() => setJadeAnimAmount(null), 1500);
   };
 
   if (!currentLevel && !showMap) {
@@ -717,6 +773,9 @@ export default function GameContainer() {
 
   const sharedOverlays = (
     <>
+      <GradeSelectModal isOpen={isGradeSelectOpen} onSelect={handleGradeSelect} />
+      <TutorialOverlay show={isTutorialOpen} onDismiss={() => setIsTutorialOpen(false)} />
+      <NewPlayerChecklist onClaimReward={handleChecklistReward} />
       <JadeAnimation amount={jadeAnimAmount} bonus={jadeAnimBonus} />
       <StreakCelebration streak={streakCelebration} />
       <DailyRewardModal
@@ -739,6 +798,7 @@ export default function GameContainer() {
           mapNodes={mapNodes}
           worldNumber={gameState.worldNumber}
           jade={gameState.jade}
+          ngPlusLevel={getNewGamePlusLevel(gameState.worldNumber)}
           bgmEnabled={bgmEnabled}
           activeCompanion={activeCompanion}
           companionHappy={companionHappy}
@@ -749,6 +809,7 @@ export default function GameContainer() {
           isSettingsOpen={isSettingsOpen}
           isGachaOpen={isGachaOpen}
           isReportOpen={isReportOpen}
+          isLeaderboardOpen={isLeaderboardOpen}
           isAuthModalOpen={isAuthModalOpen}
           isWordBookOpen={isWordBookOpen}
           isFlashcardOpen={isFlashcardOpen}
@@ -761,6 +822,8 @@ export default function GameContainer() {
           onGachaClose={() => setIsGachaOpen(false)}
           onReportOpen={() => setIsReportOpen(true)}
           onReportClose={() => setIsReportOpen(false)}
+          onLeaderboardOpen={() => setIsLeaderboardOpen(true)}
+          onLeaderboardClose={() => setIsLeaderboardOpen(false)}
           onAuthOpen={() => setIsAuthModalOpen(true)}
           onAuthClose={() => setIsAuthModalOpen(false)}
           onWordBookOpen={() => setIsWordBookOpen(true)}
@@ -772,7 +835,7 @@ export default function GameContainer() {
           onGachaRoll={handleGachaRoll}
           onDebugClose={() => setDebugMessage('')}
         />
-        <LevelClearedModal isOpen={isLevelClearedOpen} worldNumber={gameState.worldNumber} jadeBonus={500} onContinue={handleLevelClearedContinue} />
+        <LevelClearedModal isOpen={isLevelClearedOpen} worldNumber={gameState.worldNumber} jadeBonus={500} ngPlusLevel={getNewGamePlusLevel(gameState.worldNumber)} onContinue={handleLevelClearedContinue} />
         {sharedOverlays}
       </>
     );
@@ -834,8 +897,8 @@ export default function GameContainer() {
         onSentenceSubmit={handleSentenceSubmit}
         getJadeBonus={getJadeBonus}
       />
-      <LevelClearedModal isOpen={isLevelClearedOpen} worldNumber={gameState.worldNumber} jadeBonus={500} onContinue={handleLevelClearedContinue} />
-      <LootBoxModal isOpen={isLootBoxOpen} onClose={handleLootBoxClose} onReward={handleLootReward} />
+      <LevelClearedModal isOpen={isLevelClearedOpen} worldNumber={gameState.worldNumber} jadeBonus={500} ngPlusLevel={getNewGamePlusLevel(gameState.worldNumber)} onContinue={handleLevelClearedContinue} />
+      <LootBoxModal isOpen={isLootBoxOpen} onClose={handleLootBoxClose} onReward={handleLootReward} bossTier={currentBossTier} />
       {sharedOverlays}
     </>
   );

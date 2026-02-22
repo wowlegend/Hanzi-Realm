@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Swords, Headphones, Gem, Skull, Check, Lock, Sparkles } from 'lucide-react';
+import { Swords, Headphones, Gem, Skull, Check, Lock, Sparkles, Infinity as InfinityIcon } from 'lucide-react';
 import { MapNode, NodeType } from '../types';
 import { generatePathPoints } from '../utils/mapGenerator';
 import { getBossForWorld, getWorldTheme } from '../data/bosses';
@@ -9,6 +9,7 @@ import BossMonsterSprite from './BossMonsterSprite';
 interface WorldMapProps {
   nodes: MapNode[];
   worldNumber: number;
+  ngPlusLevel?: number;
   onNodeSelect: (node: MapNode) => void;
   jade: number;
 }
@@ -74,7 +75,7 @@ function getNodeLabel(type: NodeType): string {
   }
 }
 
-export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: WorldMapProps) {
+export default function WorldMap({ nodes, worldNumber, ngPlusLevel = 0, onNodeSelect, jade }: WorldMapProps) {
   const pathD = generatePathPoints(nodes);
   const theme = getWorldTheme(worldNumber);
   const boss = getBossForWorld(worldNumber);
@@ -107,9 +108,15 @@ export default function WorldMap({ nodes, worldNumber, onNodeSelect, jade }: Wor
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-white/50 text-sm sm:text-base italic"
+              className="text-white/50 text-sm sm:text-base italic flex items-center gap-2"
             >
               World {worldNumber} &mdash; {theme.subtitle}
+              {ngPlusLevel > 0 && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/20 border border-orange-500/40 text-orange-300 text-xs font-bold not-italic">
+                  <InfinityIcon className="w-3 h-3" />
+                  NG+{ngPlusLevel}
+                </span>
+              )}
             </motion.p>
           </div>
 

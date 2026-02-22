@@ -123,6 +123,28 @@ export function getBossById(id: string): Boss | undefined {
   return BOSSES.find(b => b.id === id);
 }
 
+export interface BossTier {
+  hp: number;
+  timer: number;
+  jadePerHit: number;
+  lootJadeMin: number;
+  lootJadeMax: number;
+  companionChance: number;
+  label: string;
+}
+
+export function getBossTier(worldNumber: number): BossTier {
+  const cycle = ((worldNumber - 1) % 8) + 1;
+  if (cycle <= 2) return { hp: 3, timer: 45, jadePerHit: 800, lootJadeMin: 500, lootJadeMax: 900, companionChance: 35, label: 'Normal' };
+  if (cycle <= 4) return { hp: 4, timer: 40, jadePerHit: 1000, lootJadeMin: 800, lootJadeMax: 1300, companionChance: 40, label: 'Hard' };
+  if (cycle <= 6) return { hp: 5, timer: 35, jadePerHit: 1300, lootJadeMin: 1200, lootJadeMax: 1800, companionChance: 45, label: 'Elite' };
+  return { hp: 6, timer: 30, jadePerHit: 1600, lootJadeMin: 1800, lootJadeMax: 2500, companionChance: 50, label: 'Legendary' };
+}
+
+export function getNewGamePlusLevel(worldNumber: number): number {
+  return Math.floor((worldNumber - 1) / 8);
+}
+
 export interface WorldTheme {
   name: string;
   subtitle: string;

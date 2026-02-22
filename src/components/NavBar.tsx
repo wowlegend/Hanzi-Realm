@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Volume2, Settings as SettingsIcon, Gift, Trophy, Map,
-  BookOpen, RotateCcw, Swords,
+  BookOpen, RotateCcw, Swords, Medal,
 } from 'lucide-react';
 import UserProfile from './UserProfile';
 
@@ -14,6 +14,7 @@ interface NavBarProps {
   onSettingsOpen: () => void;
   onGachaOpen: () => void;
   onReportOpen: () => void;
+  onLeaderboardOpen: () => void;
   onWordBookOpen: () => void;
   onFlashcardOpen: () => void;
   onShowMap: () => void;
@@ -60,6 +61,7 @@ export default function NavBar({
   onSettingsOpen,
   onGachaOpen,
   onReportOpen,
+  onLeaderboardOpen,
   onWordBookOpen,
   onFlashcardOpen,
   onShowMap,
@@ -118,6 +120,12 @@ export default function NavBar({
             icon={<Trophy className="w-4 h-4 text-blue-400" />}
             label="Stats"
             onClick={onReportOpen}
+          />
+          <NavItem
+            icon={<Medal className="w-4 h-4 text-amber-400" />}
+            label="Ranks"
+            onClick={onLeaderboardOpen}
+            variant="gold"
           />
           <NavItem
             icon={<Gift className="w-4 h-4 text-amber-400" />}

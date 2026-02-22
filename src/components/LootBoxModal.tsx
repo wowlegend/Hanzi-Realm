@@ -4,14 +4,23 @@ import confetti from 'canvas-confetti';
 import { X, Gift, Sparkles } from 'lucide-react';
 import { LootReward } from '../types';
 import { getRandomCompanionByRarity, getRarityColor, getBuffDescription } from '../data/companions';
+import { BossTier } from '../data/bosses';
+
+const TIER_COLORS: Record<string, string> = {
+  Normal: 'text-gray-300 border-gray-500/50 bg-gray-500/10',
+  Hard: 'text-blue-300 border-blue-500/50 bg-blue-500/10',
+  Elite: 'text-amber-300 border-amber-500/50 bg-amber-500/10',
+  Legendary: 'text-orange-300 border-orange-500/50 bg-orange-500/10',
+};
 
 interface LootBoxModalProps {
   isOpen: boolean;
   onClose: () => void;
   onReward: (reward: LootReward) => void;
+  bossTier?: BossTier | null;
 }
 
-export default function LootBoxModal({ isOpen, onClose, onReward }: LootBoxModalProps) {
+export default function LootBoxModal({ isOpen, onClose, onReward, bossTier }: LootBoxModalProps) {
   const [phase, setPhase] = useState<'shaking' | 'opening' | 'revealed'>('shaking');
   const [reward, setReward] = useState<LootReward | null>(null);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
@@ -55,10 +64,13 @@ export default function LootBoxModal({ isOpen, onClose, onReward }: LootBoxModal
         if (hasTriggeredReward.current) return;
         hasTriggeredReward.current = true;
 
+        const companionChance = bossTier?.companionChance ?? 40;
+        const jadeMin = bossTier?.lootJadeMin ?? 500;
+        const jadeMax = bossTier?.lootJadeMax ?? 1000;
         const roll = Math.random() * 100;
         let newReward: LootReward;
 
-        if (roll < 40) {
+        if (roll < companionChance) {
           const rarityRoll = Math.random() * 100;
           let rarity: 'common' | 'rare' | 'epic' | 'legendary';
           if (rarityRoll < 45) rarity = 'common';
@@ -68,7 +80,7 @@ export default function LootBoxModal({ isOpen, onClose, onReward }: LootBoxModal
           const companion = getRandomCompanionByRarity(rarity);
           newReward = { type: 'companion', companion: { ...companion, unlocked: true } };
         } else {
-          const jadeAmount = 500 + Math.floor(Math.random() * 500);
+          const jadeAmount = jadeMin + Math.floor(Math.random() * (jadeMax - jadeMin));
           newReward = { type: 'jade', amount: jadeAmount };
         }
 
@@ -151,6 +163,14 @@ export default function LootBoxModal({ isOpen, onClose, onReward }: LootBoxModal
             >
               <X className="w-6 h-6" />
             </button>
+          )}
+
+          {bossTier && (
+            <div className="flex justify-center mb-3">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold border ${TIER_COLORS[bossTier.label] || TIER_COLORS.Normal}`}>
+                {bossTier.label} Tier
+              </span>
+            </div>
           )}
 
           <h2 className="text-2xl sm:text-3xl font-black text-white text-center mb-6 drop-shadow">

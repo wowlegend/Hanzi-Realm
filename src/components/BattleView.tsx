@@ -165,6 +165,7 @@ export default function BattleView({
         onSettingsOpen={onSettingsOpen}
         onGachaOpen={onGachaOpen}
         onReportOpen={onReportOpen}
+        onLeaderboardOpen={() => {}}
         onWordBookOpen={onWordBookOpen}
         onFlashcardOpen={onFlashcardOpen}
         onShowMap={onShowMap}

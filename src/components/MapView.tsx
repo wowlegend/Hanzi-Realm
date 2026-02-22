@@ -11,6 +11,7 @@ import DebugLog from './DebugLog';
 import AuthModal from './AuthModal';
 import WordBook from './WordBook';
 import FlashcardReview from './FlashcardReview';
+import LeaderboardModal from './LeaderboardModal';
 
 interface MapViewProps {
   settings: GameSettings;
@@ -18,6 +19,7 @@ interface MapViewProps {
   mapNodes: MapNode[];
   worldNumber: number;
   jade: number;
+  ngPlusLevel?: number;
   bgmEnabled: boolean;
   activeCompanion: Companion | null;
   companionHappy: boolean;
@@ -28,6 +30,7 @@ interface MapViewProps {
   isSettingsOpen: boolean;
   isGachaOpen: boolean;
   isReportOpen: boolean;
+  isLeaderboardOpen: boolean;
   isAuthModalOpen: boolean;
   isWordBookOpen: boolean;
   isFlashcardOpen: boolean;
@@ -40,6 +43,8 @@ interface MapViewProps {
   onGachaClose: () => void;
   onReportOpen: () => void;
   onReportClose: () => void;
+  onLeaderboardOpen: () => void;
+  onLeaderboardClose: () => void;
   onAuthOpen: () => void;
   onAuthClose: () => void;
   onWordBookOpen: () => void;
@@ -58,6 +63,7 @@ export default function MapView({
   mapNodes,
   worldNumber,
   jade,
+  ngPlusLevel = 0,
   bgmEnabled,
   activeCompanion,
   companionHappy,
@@ -68,6 +74,7 @@ export default function MapView({
   isSettingsOpen,
   isGachaOpen,
   isReportOpen,
+  isLeaderboardOpen,
   isAuthModalOpen,
   isWordBookOpen,
   isFlashcardOpen,
@@ -80,6 +87,8 @@ export default function MapView({
   onGachaClose,
   onReportOpen,
   onReportClose,
+  onLeaderboardOpen,
+  onLeaderboardClose,
   onAuthOpen,
   onAuthClose,
   onWordBookOpen,
@@ -109,6 +118,7 @@ export default function MapView({
         onSettingsOpen={onSettingsOpen}
         onGachaOpen={onGachaOpen}
         onReportOpen={onReportOpen}
+        onLeaderboardOpen={onLeaderboardOpen}
         onWordBookOpen={onWordBookOpen}
         onFlashcardOpen={onFlashcardOpen}
         onShowMap={() => {}}
@@ -118,6 +128,7 @@ export default function MapView({
       <WorldMap
         nodes={mapNodes}
         worldNumber={worldNumber}
+        ngPlusLevel={ngPlusLevel}
         onNodeSelect={onNodeSelect}
         jade={jade}
       />
@@ -172,6 +183,11 @@ export default function MapView({
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={onAuthClose}
+      />
+
+      <LeaderboardModal
+        isOpen={isLeaderboardOpen}
+        onClose={onLeaderboardClose}
       />
     </>
   );

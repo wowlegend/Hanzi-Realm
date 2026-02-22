@@ -281,6 +281,64 @@ export async function loadDailyRewardsFromCloud(userId: string): Promise<DailyRe
   };
 }
 
+export interface LeaderboardEntry {
+  user_id: string;
+  display_name: string;
+  jade_total: number;
+  best_streak: number;
+  bosses_defeated: number;
+  words_mastered: number;
+  world_reached: number;
+  grade_level: number;
+}
+
+export async function syncLeaderboardEntry(
+  userId: string,
+  displayName: string,
+  jadeTotal: number,
+  bestStreak: number,
+  bossesDefeated: number,
+  wordsMastered: number,
+  worldReached: number,
+  gradeLevel: number
+): Promise<void> {
+  try {
+    await supabase
+      .from('leaderboard_entries')
+      .upsert({
+        user_id: userId,
+        display_name: displayName,
+        jade_total: jadeTotal,
+        best_streak: bestStreak,
+        bosses_defeated: bossesDefeated,
+        words_mastered: wordsMastered,
+        world_reached: worldReached,
+        grade_level: gradeLevel,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+  } catch (error) {
+    console.error('Error syncing leaderboard:', error);
+  }
+}
+
+export async function getLeaderboard(
+  category: 'jade_total' | 'best_streak' | 'bosses_defeated' | 'words_mastered',
+  limit = 50
+): Promise<LeaderboardEntry[]> {
+  const { data, error } = await supabase
+    .from('leaderboard_entries')
+    .select('*')
+    .order(category, { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching leaderboard:', error);
+    return [];
+  }
+
+  return (data as LeaderboardEntry[]) || [];
+}
+
 export async function recordCharacterAttempt(
   userId: string,
   character: string,
