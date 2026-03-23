@@ -145,22 +145,24 @@ export function getNewGamePlusLevel(worldNumber: number): number {
   return Math.floor((worldNumber - 1) / 8);
 }
 
+export type PathShape = 'sine' | 'zigzag' | 'spiral' | 'cascade' | 'diamond' | 'serpentine' | 'staircase' | 'vortex';
+
 export interface WorldTheme {
   name: string;
   subtitle: string;
   nodeCount: number;
-  pathShape: 'sine' | 'zigzag' | 'spiral';
+  pathShape: PathShape;
   colors: { primary: string; secondary: string; accent: string };
 }
 
 export const WORLD_THEMES: WorldTheme[] = [
   { name: 'Bamboo Forest', subtitle: 'Where silence teaches', nodeCount: 10, pathShape: 'sine', colors: { primary: '#2d5016', secondary: '#4a7c23', accent: '#8fbc3f' } },
-  { name: 'Storm Peak', subtitle: 'Lightning forges the brave', nodeCount: 11, pathShape: 'zigzag', colors: { primary: '#1a3a4a', secondary: '#2d6987', accent: '#5bb8d9' } },
+  { name: 'Storm Peak', subtitle: 'Lightning forges the brave', nodeCount: 11, pathShape: 'cascade', colors: { primary: '#1a3a4a', secondary: '#2d6987', accent: '#5bb8d9' } },
   { name: 'Jade Temple', subtitle: 'Ancient wisdom awaits', nodeCount: 12, pathShape: 'spiral', colors: { primary: '#1a4a3a', secondary: '#2d8760', accent: '#5bd9a0' } },
-  { name: 'Crimson Desert', subtitle: 'Only the focused survive', nodeCount: 13, pathShape: 'zigzag', colors: { primary: '#4a1a1a', secondary: '#873b2d', accent: '#d95b5b' } },
-  { name: 'Frozen Summit', subtitle: 'Patience reveals the path', nodeCount: 11, pathShape: 'sine', colors: { primary: '#1a2a4a', secondary: '#4a7ab0', accent: '#a0c4e8' } },
-  { name: 'Shadow Caverns', subtitle: 'Knowledge lights the dark', nodeCount: 14, pathShape: 'spiral', colors: { primary: '#1a1a2a', secondary: '#3a3a5a', accent: '#7a7ab0' } },
-  { name: 'Golden Palace', subtitle: 'The final trial begins', nodeCount: 12, pathShape: 'sine', colors: { primary: '#4a3a1a', secondary: '#b08f2d', accent: '#ffd700' } },
+  { name: 'Crimson Desert', subtitle: 'Only the focused survive', nodeCount: 13, pathShape: 'diamond', colors: { primary: '#4a1a1a', secondary: '#873b2d', accent: '#d95b5b' } },
+  { name: 'Frozen Summit', subtitle: 'Patience reveals the path', nodeCount: 11, pathShape: 'serpentine', colors: { primary: '#1a2a4a', secondary: '#4a7ab0', accent: '#a0c4e8' } },
+  { name: 'Shadow Caverns', subtitle: 'Knowledge lights the dark', nodeCount: 14, pathShape: 'vortex', colors: { primary: '#1a1a2a', secondary: '#3a3a5a', accent: '#7a7ab0' } },
+  { name: 'Golden Palace', subtitle: 'The final trial begins', nodeCount: 12, pathShape: 'staircase', colors: { primary: '#4a3a1a', secondary: '#b08f2d', accent: '#ffd700' } },
   { name: 'Dragon Abyss', subtitle: 'Master all or fall', nodeCount: 15, pathShape: 'zigzag', colors: { primary: '#2a1a1a', secondary: '#5a2d2d', accent: '#ff4444' } },
 ];
 
