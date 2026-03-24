@@ -903,7 +903,11 @@ export function getRandomLevelsForGrade(grade: number, count: number, seenIds: S
 
   const levelsToUse = availableLevels.length >= count ? availableLevels : allLevels;
 
-  const shuffled = [...levelsToUse].sort(() => Math.random() - 0.5);
+  const shuffled = [...levelsToUse];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
   const selected = shuffled.slice(0, Math.min(count, shuffled.length));
 
   selected.forEach(l => seenIds.add(l.id));

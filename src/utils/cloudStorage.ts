@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { GameSettings, MapNode, Companion } from '../types';
 import { withRetry } from './syncRetry';
+import { showErrorToast } from '../components/ErrorToast';
 
 interface GameProgress {
   jade: number;
@@ -74,6 +75,7 @@ export async function loadProgressFromCloud(userId: string): Promise<GameProgres
 
   if (error) {
     console.error('Error loading progress:', error);
+    showErrorToast('Failed to load cloud save data');
     return null;
   }
 
@@ -85,37 +87,38 @@ export async function syncCompanionsToCloud(
   companions: Companion[],
   activeCompanionId: string | null
 ): Promise<void> {
-  const { error: deleteError } = await supabase
-    .from('companions')
-    .delete()
-    .eq('user_id', userId);
-
-  if (deleteError) {
-    console.error('Error deleting old companions:', deleteError);
-    throw deleteError;
+  if (companions.length === 0) {
+    const { error } = await supabase
+      .from('companions')
+      .delete()
+      .eq('user_id', userId);
+    if (error) {
+      console.error('Error clearing companions:', error);
+      throw error;
+    }
+    return;
   }
 
-  if (companions.length > 0) {
-    const companionData = companions.map(c => ({
-      user_id: userId,
-      companion_id: c.id,
-      name: c.name,
-      emoji: c.emoji,
-      avatar_seed: c.avatarSeed,
-      rarity: c.rarity,
-      buff_type: c.buffType,
-      buff_value: c.buffValue,
-      is_active: c.id === activeCompanionId,
-    }));
+  const companionData = companions.map(c => ({
+    user_id: userId,
+    companion_id: c.id,
+    name: c.name,
+    emoji: c.emoji,
+    avatar_seed: c.avatarSeed,
+    rarity: c.rarity,
+    buff_type: c.buffType,
+    buff_value: c.buffValue,
+    is_active: c.id === activeCompanionId,
+    updated_at: new Date().toISOString(),
+  }));
 
-    const { error: insertError } = await supabase
-      .from('companions')
-      .insert(companionData);
+  const { error } = await supabase
+    .from('companions')
+    .upsert(companionData, { onConflict: 'user_id,companion_id' });
 
-    if (insertError) {
-      console.error('Error syncing companions:', insertError);
-      throw insertError;
-    }
+  if (error) {
+    console.error('Error syncing companions:', error);
+    throw error;
   }
 }
 
@@ -127,6 +130,7 @@ export async function loadCompanionsFromCloud(userId: string): Promise<{ compani
 
   if (error) {
     console.error('Error loading companions:', error);
+    showErrorToast('Failed to load companions from cloud');
     return { companions: [], activeCompanion: null };
   }
 
@@ -184,6 +188,7 @@ export async function loadSettingsFromCloud(userId: string): Promise<{ settings:
 
   if (error) {
     console.error('Error loading settings:', error);
+    showErrorToast('Failed to load settings from cloud');
     return null;
   }
 
@@ -232,6 +237,7 @@ export async function loadMapStateFromCloud(userId: string, worldId: number): Pr
 
   if (error) {
     console.error('Error loading map state:', error);
+    showErrorToast('Failed to load map from cloud');
     return null;
   }
 
@@ -269,6 +275,7 @@ export async function loadDailyRewardsFromCloud(userId: string): Promise<DailyRe
 
   if (error) {
     console.error('Error loading daily rewards:', error);
+    showErrorToast('Failed to load daily rewards');
     return null;
   }
 
@@ -333,6 +340,7 @@ export async function getLeaderboard(
 
   if (error) {
     console.error('Error fetching leaderboard:', error);
+    showErrorToast('Failed to load leaderboard');
     return [];
   }
 

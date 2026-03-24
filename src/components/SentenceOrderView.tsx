@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw } from 'lucide-react';
 import { Level } from '../types';
@@ -60,9 +60,27 @@ export default function SentenceOrderView({ level, onSubmit, disabled }: Sentenc
 
   const isComplete = available.length === 0 && placed.length > 0;
 
+  useEffect(() => {
+    if (disabled) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const num = parseInt(e.key);
+      if (num >= 1 && num <= available.length) {
+        handlePickWord(available[num - 1], num - 1);
+      }
+      if (e.key === 'Backspace' && placed.length > 0) {
+        handleUnpick(placed[placed.length - 1], placed.length - 1);
+      }
+      if (e.key === 'Enter' && isComplete) {
+        handleSubmit();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [disabled, available, placed, isComplete, handlePickWord, handleUnpick, handleSubmit]);
+
   return (
-    <div className="space-y-4">
-      <div className="bg-black/30 border-2 border-white/10 rounded-2xl p-4 min-h-[60px] flex flex-wrap gap-2 items-center">
+    <div className="space-y-4" role="group" aria-label="Sentence ordering">
+      <div className="bg-black/30 border-2 border-white/10 rounded-2xl p-4 min-h-[60px] flex flex-wrap gap-2 items-center" aria-label="Placed words">
         {placed.length === 0 && (
           <span className="text-gray-500 text-sm">Tap words below to build the sentence...</span>
         )}
@@ -84,7 +102,7 @@ export default function SentenceOrderView({ level, onSubmit, disabled }: Sentenc
         </AnimatePresence>
       </div>
 
-      <div className="flex flex-wrap gap-2 justify-center">
+      <div className="flex flex-wrap gap-2 justify-center" aria-label="Available words" role="group">
         <AnimatePresence mode="popLayout">
           {available.map((word, i) => (
             <motion.button
@@ -97,9 +115,15 @@ export default function SentenceOrderView({ level, onSubmit, disabled }: Sentenc
               disabled={disabled}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="bg-gradient-to-b from-gray-600 to-gray-700 text-white font-bold text-lg px-4 py-2 rounded-xl border-2 border-gray-500 shadow-md hover:border-sky-400 transition-colors"
+              aria-label={`Word: ${word}, press ${i + 1}`}
+              className="relative bg-gradient-to-b from-gray-600 to-gray-700 text-white font-bold text-lg px-4 py-2 min-h-[44px] rounded-xl border-2 border-gray-500 shadow-md hover:border-sky-400 transition-colors"
             >
               {word}
+              {i < 9 && (
+                <span className="absolute -top-1.5 -left-1.5 w-4 h-4 bg-white/20 rounded-full text-[9px] font-bold flex items-center justify-center text-white/60">
+                  {i + 1}
+                </span>
+              )}
             </motion.button>
           ))}
         </AnimatePresence>

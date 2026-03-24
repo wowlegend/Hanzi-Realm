@@ -95,15 +95,23 @@ export default function NewPlayerChecklist({ onClaimReward }: NewPlayerChecklist
       <div className="modal-content rounded-2xl overflow-hidden shadow-2xl border border-white/10">
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/8 transition-colors"
+          className="w-full flex flex-col px-4 py-3 bg-white/5 hover:bg-white/8 transition-colors"
         >
-          <div className="flex items-center gap-2">
-            <Gift className="w-4 h-4 text-amber-400" />
-            <span className="text-white text-sm font-bold">New Player Rewards</span>
+          <div className="flex items-center justify-between w-full mb-2">
+            <div className="flex items-center gap-2">
+              <Gift className="w-4 h-4 text-amber-400" />
+              <span className="text-white text-sm font-bold">New Player Rewards</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-white/50 text-xs">{completedCount}/{tasks.length}</span>
+              {collapsed ? <ChevronUp className="w-4 h-4 text-white/40" /> : <ChevronDown className="w-4 h-4 text-white/40" />}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-white/50 text-xs">{completedCount}/{tasks.length}</span>
-            {collapsed ? <ChevronUp className="w-4 h-4 text-white/40" /> : <ChevronDown className="w-4 h-4 text-white/40" />}
+          <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-amber-500 to-amber-300 rounded-full transition-all duration-500"
+              style={{ width: `${(completedCount / tasks.length) * 100}%` }}
+            />
           </div>
         </button>
 

@@ -226,7 +226,16 @@ export default function SettingsModal({
                     <label className="block text-gray-300 text-sm mb-2">Grade Level</label>
                     <select
                       value={gradeLevel}
-                      onChange={(e) => setGradeLevel(Number(e.target.value))}
+                      onChange={(e) => {
+                        const newGrade = Number(e.target.value);
+                        if (newGrade !== settings.gradeLevel) {
+                          if (window.confirm('Changing grade will reset your world progress to World 1. Continue?')) {
+                            setGradeLevel(newGrade);
+                          }
+                        } else {
+                          setGradeLevel(newGrade);
+                        }
+                      }}
                       className="w-full border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#00b06f]"
                     >
                       <option value={1}>Grade 1 (Basic Nouns)</option>
@@ -236,7 +245,7 @@ export default function SettingsModal({
                       <option value={5}>Grade 5 (Abstract Concepts)</option>
                       <option value={6}>Grade 6 (Idioms & Complex)</option>
                     </select>
-                    <p className="text-gray-500 text-xs mt-2">Changes curriculum difficulty</p>
+                    <p className="text-gray-500 text-xs mt-2">Changes curriculum difficulty (resets world progress)</p>
                   </div>
 
                   <div>

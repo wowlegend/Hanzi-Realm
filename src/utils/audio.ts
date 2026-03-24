@@ -268,15 +268,23 @@ function playBlob(blob: Blob): Promise<void> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
+    const timeout = setTimeout(() => {
+      audio.pause();
+      URL.revokeObjectURL(url);
+      resolve();
+    }, 10000);
     audio.onended = () => {
+      clearTimeout(timeout);
       URL.revokeObjectURL(url);
       resolve();
     };
     audio.onerror = () => {
+      clearTimeout(timeout);
       URL.revokeObjectURL(url);
       reject(new Error('Audio playback failed'));
     };
     audio.play().catch((err) => {
+      clearTimeout(timeout);
       URL.revokeObjectURL(url);
       reject(err);
     });
@@ -314,9 +322,21 @@ const speakWithBrowserTts = (text: string, language: string, audioSpeed: number 
   window.speechSynthesis.speak(utterance);
 };
 
+let sharedAudioContext: AudioContext | null = null;
+
+function getAudioContext(): AudioContext {
+  if (!sharedAudioContext || sharedAudioContext.state === 'closed') {
+    sharedAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  if (sharedAudioContext.state === 'suspended') {
+    sharedAudioContext.resume();
+  }
+  return sharedAudioContext;
+}
+
 export const playSound = (type: 'correct' | 'wrong' | 'purchase' | 'combo'): void => {
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioContext = getAudioContext();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 

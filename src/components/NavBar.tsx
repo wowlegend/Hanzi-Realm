@@ -43,7 +43,8 @@ function NavItem({ icon, label, onClick, variant = 'default', badge }: NavItemPr
       onClick={onClick}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      className={`relative flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-colors ${variantStyles[variant]}`}
+      aria-label={label}
+      className={`relative flex items-center gap-1.5 px-3 py-2 min-h-[44px] min-w-[44px] justify-center rounded-xl border transition-colors ${variantStyles[variant]}`}
     >
       {icon}
       <span className="text-white/80 text-xs font-semibold hidden lg:inline">{label}</span>
@@ -140,7 +141,8 @@ export default function NavBar({
             onClick={onBgmToggle}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className={`p-2 rounded-xl border transition-colors ${
+            aria-label={bgmEnabled ? 'Mute music' : 'Enable music'}
+            className={`p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border transition-colors ${
               bgmEnabled
                 ? 'bg-green-600/30 border-green-500/30 hover:bg-green-600/40'
                 : 'bg-white/5 border-white/10 hover:bg-white/10'
@@ -212,7 +214,9 @@ function MobileNavItem({ icon, label, active, disabled, onClick }: MobileNavItem
       onClick={onClick}
       whileTap={!disabled ? { scale: 0.9 } : {}}
       disabled={disabled}
-      className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-[52px] ${
+      aria-label={label}
+      aria-current={active ? 'page' : undefined}
+      className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[52px] min-h-[44px] ${
         active
           ? 'text-teal-400'
           : disabled

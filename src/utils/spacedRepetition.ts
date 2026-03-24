@@ -26,12 +26,18 @@ export async function recordQuestionAttempt(
   questionId: string,
   isCorrect: boolean
 ): Promise<void> {
-  const { data: existing } = await supabase
+  try {
+  const { data: existing, error: fetchError } = await supabase
     .from('question_attempts')
     .select('*')
     .eq('user_id', userId)
     .eq('question_id', questionId)
     .maybeSingle();
+
+  if (fetchError) {
+    console.error('Error fetching question attempt:', fetchError);
+    return;
+  }
 
   const now = new Date();
 
@@ -42,8 +48,8 @@ export async function recordQuestionAttempt(
 
     const nextEligible = new Date(now.getTime() + cooldown);
 
-    const totalAttempts = (existing.streak_count > 0 ? existing.streak_count : 1) + 1;
-    const correctAttempts = isCorrect ? (existing.answered_correctly ? existing.streak_count + 1 : 1) : 0;
+    const totalAttempts = (existing.total_attempts ?? 1) + 1;
+    const correctAttempts = (existing.correct_count ?? 0) + (isCorrect ? 1 : 0);
     const newDifficulty = 1 - (correctAttempts / totalAttempts);
 
     await supabase
@@ -53,6 +59,8 @@ export async function recordQuestionAttempt(
         answered_at: now.toISOString(),
         next_eligible_at: nextEligible.toISOString(),
         streak_count: newStreak,
+        total_attempts: totalAttempts,
+        correct_count: correctAttempts,
         difficulty_score: Math.max(0, Math.min(1, newDifficulty)),
         updated_at: now.toISOString(),
       })
@@ -70,8 +78,13 @@ export async function recordQuestionAttempt(
         answered_at: now.toISOString(),
         next_eligible_at: nextEligible.toISOString(),
         streak_count: isCorrect ? 1 : 0,
+        total_attempts: 1,
+        correct_count: isCorrect ? 1 : 0,
         difficulty_score: isCorrect ? 0.3 : 0.7,
       });
+  }
+  } catch (error) {
+    console.error('Error recording question attempt:', error);
   }
 }
 

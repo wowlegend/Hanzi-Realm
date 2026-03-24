@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Volume2, Loader, Zap, Lightbulb, Search } from 'lucide-react';
+import { Volume2, Loader, Zap, Lightbulb, Search, Flame, Headphones } from 'lucide-react';
 import { GameState, GameSettings, PlayerInventory, Companion, Level, SessionStats, MusicState, AnswerOption } from '../types';
 import { getBuffDescription } from '../data/companions';
 import { Boss } from '../data/bosses';
@@ -19,6 +19,119 @@ import DebugLog from './DebugLog';
 import AuthModal from './AuthModal';
 import WordBook from './WordBook';
 import FlashcardReview from './FlashcardReview';
+
+function StreakMeter({ streak, fireMode }: { streak: number; fireMode: boolean }) {
+  const maxDisplay = 10;
+  const filled = Math.min(streak, maxDisplay);
+  const percentage = (filled / maxDisplay) * 100;
+  const nextMilestone = [5, 10, 15, 20, 25].find(m => m > streak) || 25;
+
+  if (streak === 0) return null;
+
+  return (
+    <div className="flex items-center gap-2 w-full">
+      <div className="flex-1">
+        <div className="flex items-center justify-between mb-1">
+          <span className={`text-xs font-bold ${fireMode ? 'text-orange-300' : 'text-white/60'}`}>
+            {fireMode ? 'FIRE MODE' : `Streak: ${streak}`}
+          </span>
+          <span className="text-[10px] text-white/40">Next: {nextMilestone}</span>
+        </div>
+        <div className="h-2 bg-black/40 rounded-full overflow-hidden border border-white/10">
+          <motion.div
+            className={`h-full rounded-full ${
+              fireMode
+                ? 'bg-gradient-to-r from-orange-500 via-red-500 to-yellow-400'
+                : streak >= 3
+                  ? 'bg-gradient-to-r from-teal-500 to-emerald-400'
+                  : 'bg-gradient-to-r from-blue-500 to-cyan-400'
+            }`}
+            initial={{ width: 0 }}
+            animate={{ width: `${percentage}%` }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+          />
+        </div>
+      </div>
+      {streak >= 3 && (
+        <motion.div
+          animate={{ scale: [1, 1.2, 1], rotate: [0, 5, -5, 0] }}
+          transition={{ duration: 0.6, repeat: Infinity }}
+        >
+          {fireMode
+            ? <Flame className="w-5 h-5 text-orange-400" />
+            : <Zap className="w-5 h-5 text-teal-400" />
+          }
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+function ListeningWaveform() {
+  const bars = 12;
+  return (
+    <div className="flex items-center justify-center gap-1 py-2">
+      {Array.from({ length: bars }).map((_, i) => (
+        <motion.div
+          key={i}
+          className="w-1 rounded-full bg-gradient-to-t from-yellow-500 to-yellow-300"
+          animate={{
+            height: [8, 16 + Math.random() * 16, 8],
+          }}
+          transition={{
+            duration: 0.6 + Math.random() * 0.4,
+            repeat: Infinity,
+            delay: i * 0.05,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+      <Headphones className="w-4 h-4 text-yellow-400 ml-2" />
+      <span className="text-yellow-400 text-xs font-bold ml-1">Listening Mode</span>
+    </div>
+  );
+}
+
+function FireParticles() {
+  const particles = useMemo(() =>
+    Array.from({ length: 8 }, (_, i) => ({
+      id: i,
+      x: 10 + Math.random() * 80,
+      delay: Math.random() * 2,
+      duration: 1.5 + Math.random() * 1.5,
+      size: 3 + Math.random() * 4,
+    })),
+  []);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+      {particles.map(p => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full"
+          style={{
+            left: `${p.x}%`,
+            bottom: 0,
+            width: p.size,
+            height: p.size,
+            background: `radial-gradient(circle, #ff6b35, #ff3e00)`,
+          }}
+          animate={{
+            y: [0, -200],
+            opacity: [0.8, 0],
+            scale: [1, 0.3],
+          }}
+          transition={{
+            duration: p.duration,
+            repeat: Infinity,
+            delay: p.delay,
+            ease: 'easeOut',
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 interface BattleViewProps {
   gameState: GameState;
@@ -203,29 +316,10 @@ export default function BattleView({
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3 sm:gap-4 mb-6">
+          <div className="flex flex-wrap gap-3 sm:gap-4 mb-4">
             <div className="voxel-card glass-yellow border-yellow-700 px-4 py-2 sm:px-6 sm:py-3">
               <p className="text-white text-sm sm:text-base font-black drop-shadow">
                 {gameState.jade} Jade
-              </p>
-            </div>
-            <div className={`voxel-card px-4 py-2 sm:px-6 sm:py-3 relative transition-all duration-300 ${
-              gameState.fireMode ? 'border-orange-500 shadow-[0_0_20px_rgba(255,165,0,0.6)]' : 'border-orange-700'
-            }`}>
-              {gameState.currentStreak >= 3 && (
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 0.5, repeat: Infinity }}
-                  className="absolute -top-3 -right-3 text-3xl"
-                >
-                  {gameState.fireMode ? <Zap className="w-8 h-8 text-yellow-400" /> : <Zap className="w-6 h-6 text-orange-400" />}
-                </motion.div>
-              )}
-              <p className={`text-sm sm:text-base font-black drop-shadow ${
-                gameState.currentStreak > 0 ? 'text-white' : 'text-gray-300'
-              }`}>
-                Streak: {gameState.currentStreak}
-                {gameState.fireMode && ' FIRE!'}
               </p>
             </div>
             <div className="voxel-card glass-green border-green-700 px-4 py-2 sm:px-6 sm:py-3">
@@ -242,16 +336,22 @@ export default function BattleView({
             )}
           </div>
 
+          <div className="mb-6">
+            <StreakMeter streak={gameState.currentStreak} fireMode={gameState.fireMode} />
+          </div>
+
           <motion.div
             animate={shake ? { rotateZ: [-1, 1, -1, 1, 0] } : {}}
             transition={{ duration: 0.4 }}
-            className={`voxel-card rounded-3xl mb-4 transition-all duration-300 ${
+            className={`voxel-card rounded-3xl mb-4 transition-all duration-300 relative ${
               isBossMode ? 'border-red-500 border-4 p-4 sm:p-5' :
               gameState.fireMode ? 'border-orange-500 border-4 shadow-[0_0_30px_rgba(255,165,0,0.4)] p-6 sm:p-8' :
               'border-gray-700 p-6 sm:p-8'
             }`}
             style={isBossMode ? { position: 'relative', zIndex: 35 } : undefined}
           >
+            {gameState.fireMode && <FireParticles />}
+
             <div className={isBossMode ? 'mb-3' : 'mb-6'}>
               <div className={`flex items-start gap-4 ${isBossMode ? 'mb-2' : 'mb-4'}`}>
                 <NarratorAvatar
@@ -264,7 +364,10 @@ export default function BattleView({
                     {isBossMode && 'BOSS: '}{currentLevel.scenario}
                   </h2>
                   {gameState.gameMode === 'listening' && (
-                    <p className="text-yellow-400 text-sm mt-1">Listen carefully and choose the right character!</p>
+                    <>
+                      <p className="text-yellow-400 text-sm mt-1">Listen carefully and choose the right character!</p>
+                      <ListeningWaveform />
+                    </>
                   )}
                   {currentLevel.distractorType && (
                     <p className="text-gray-400 text-xs mt-1">
@@ -367,20 +470,51 @@ export default function BattleView({
                     onHoverStart={() => setHoveredOption(option.value)}
                     onHoverEnd={() => setHoveredOption(null)}
                     disabled={gameState.showFeedback}
-                    whileHover={!gameState.showFeedback ? { scale: 1.02, rotateX: 5 } : {}}
-                    whileTap={!gameState.showFeedback ? { scale: 0.98 } : {}}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    whileHover={!gameState.showFeedback ? { scale: 1.02, x: 4 } : {}}
+                    whileTap={!gameState.showFeedback ? { scale: 0.97 } : {}}
                     className={`
-                      w-full rounded-2xl font-bold border-2 transition-all duration-300
+                      w-full rounded-2xl font-bold border-2 transition-all duration-300 relative overflow-hidden
                       ${isBossMode ? 'p-3 text-lg' : 'p-4 sm:p-6 text-xl sm:text-2xl'}
                       ${showAsCorrect ? 'bg-green-600/60 border-green-500 text-white' : ''}
                       ${showAsWrong ? 'bg-red-600/60 border-red-500 text-white' : ''}
                       ${showCorrectHighlight ? 'bg-green-600/60 border-green-500 text-white opacity-60' : ''}
-                      ${!gameState.showFeedback ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white' : ''}
+                      ${!gameState.showFeedback ? 'border-white/10 bg-white/5 hover:bg-white/15 hover:border-white/20 text-white' : ''}
                       ${gameState.showFeedback && !isSelected && !showCorrectHighlight ? 'opacity-40 border-white/10 bg-white/5' : ''}
                       disabled:cursor-not-allowed
                     `}
                   >
-                    <div className="flex items-center justify-between">
+                    {!gameState.showFeedback && hoveredOption === option.value && (
+                      <motion.div
+                        className="absolute inset-0 pointer-events-none"
+                        initial={{ x: '-100%' }}
+                        animate={{ x: '200%' }}
+                        transition={{ duration: 0.8, ease: 'easeInOut' }}
+                        style={{
+                          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)',
+                        }}
+                      />
+                    )}
+                    {showAsCorrect && (
+                      <motion.div
+                        className="absolute inset-0 pointer-events-none"
+                        initial={{ opacity: 0.6 }}
+                        animate={{ opacity: 0 }}
+                        transition={{ duration: 0.6 }}
+                        style={{ background: 'radial-gradient(circle, rgba(34,197,94,0.4), transparent)' }}
+                      />
+                    )}
+                    {showAsWrong && (
+                      <motion.div
+                        className="absolute inset-0 pointer-events-none"
+                        initial={{ opacity: 0.6 }}
+                        animate={{ opacity: 0 }}
+                        transition={{ duration: 0.6 }}
+                        style={{ background: 'radial-gradient(circle, rgba(239,68,68,0.4), transparent)' }}
+                      />
+                    )}
+                    <div className="flex items-center justify-between relative z-10">
                       <div className="flex items-center gap-3">
                         <span className="text-3xl sm:text-4xl">{option.value}</span>
                         <span className="text-gray-400 text-base sm:text-lg font-mono">{option.pinyin}</span>
@@ -470,24 +604,40 @@ export default function BattleView({
             )}
           </motion.div>
 
-          <div className="border border-white/20 rounded-full h-4 sm:h-6 overflow-hidden bg-black/20">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPercentage}%` }}
-              transition={{ duration: 0.5 }}
-              className={`h-full rounded-full ${
-                gameState.fireMode
-                  ? 'bg-gradient-to-r from-orange-500 to-red-500'
-                  : 'bg-gradient-to-r from-[#00b06f] to-[#ffd700]'
-              }`}
-            />
+          <div className="relative">
+            <div className="border border-white/20 rounded-full h-4 sm:h-6 overflow-hidden bg-black/30">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercentage}%` }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                className={`h-full rounded-full relative ${
+                  gameState.fireMode
+                    ? 'bg-gradient-to-r from-orange-500 via-red-500 to-yellow-500'
+                    : 'bg-gradient-to-r from-[#00b06f] to-[#ffd700]'
+                }`}
+              >
+                <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent rounded-full" />
+              </motion.div>
+            </div>
+            <div className="flex items-center justify-between mt-1.5">
+              <div className="flex gap-1">
+                {isInNode && Array.from({ length: nodeTotal }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      i < nodeProgress ? 'bg-teal-400' : 'bg-white/15'
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="text-white/70 drop-shadow text-xs sm:text-sm font-bold">
+                {isInNode
+                  ? `${nodeProgress} / ${nodeTotal}`
+                  : `${gameState.currentLevelIndex + 1} / ${levels.length}`
+                }
+              </p>
+            </div>
           </div>
-          <p className="text-center text-white drop-shadow text-sm sm:text-base mt-2 font-bold">
-            {isInNode
-              ? `Question ${nodeProgress} of ${nodeTotal}`
-              : `Challenge ${gameState.currentLevelIndex + 1} of ${levels.length}`
-            }
-          </p>
         </motion.div>
 
         <SettingsModal

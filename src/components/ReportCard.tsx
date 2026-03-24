@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Copy, Trophy, Target, Flame, Gem, Award, Calendar, TrendingUp } from 'lucide-react';
+import { X, Copy, Trophy, Target, Flame, Gem, Award, Calendar, TrendingUp, Download } from 'lucide-react';
 import { SessionStats, GameState } from '../types';
 import { getUnlockedAchievements, ACHIEVEMENTS } from '../data/achievements';
 import { getConsecutiveDays } from '../utils/dailyRewards';

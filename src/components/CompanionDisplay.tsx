@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Companion } from '../types';
 import { getRarityColor, getBuffDescription, getCompanionTheme } from '../data/companions';
@@ -251,7 +252,7 @@ function RobloxSprite({ id, size }: { id: string; size: number }) {
   );
 }
 
-export default function CompanionDisplay({ companion, isHappy = false }: CompanionDisplayProps) {
+export default memo(function CompanionDisplay({ companion, isHappy = false }: CompanionDisplayProps) {
   if (!companion) return null;
 
   return (
@@ -287,4 +288,4 @@ export default function CompanionDisplay({ companion, isHappy = false }: Compani
       </div>
     </motion.div>
   );
-}
+})

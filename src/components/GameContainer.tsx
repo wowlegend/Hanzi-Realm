@@ -304,9 +304,14 @@ export default function GameContainer() {
     }
   };
 
-  const syncProgress = async (jade: number, currentStreak: number, bestStreak: number, questionsAnswered: number, bossesDefeated: number, worldNumber: number, gradeLevel: number, wordsLearned: string[]) => {
+  const syncDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSyncRef = useRef<(() => Promise<void>) | null>(null);
+
+  const syncProgress = (jade: number, currentStreak: number, bestStreak: number, questionsAnswered: number, bossesDefeated: number, worldNumber: number, gradeLevel: number, wordsLearned: string[]) => {
     saveProgress(jade, bestStreak, bossesDefeated, questionsAnswered, wordsLearned, worldNumber);
-    if (user) {
+    if (!user) return;
+
+    pendingSyncRef.current = async () => {
       try {
         await syncProgressToCloud(
           user.id, jade, currentStreak, bestStreak, questionsAnswered,
@@ -319,10 +324,17 @@ export default function GameContainer() {
       } catch (error) {
         console.error('Error syncing progress:', error);
       }
-    }
+    };
+
+    if (syncDebounceRef.current) clearTimeout(syncDebounceRef.current);
+    syncDebounceRef.current = setTimeout(() => {
+      pendingSyncRef.current?.();
+      pendingSyncRef.current = null;
+      syncDebounceRef.current = null;
+    }, 3000);
   };
 
-  const currentLevel = levels[gameState.currentLevelIndex] || levels[0];
+  const currentLevel = levels.length > 0 ? (levels[gameState.currentLevelIndex] || levels[0]) : null;
   const fullSentence = currentLevel ? getLevelFullSentence(currentLevel) : '';
   const correctAnswer = currentLevel ? getCorrectAnswerFromLevel(currentLevel) : '';
   const activeCompanion = inventory.companions.find(c => c.id === inventory.activeCompanion) || null;

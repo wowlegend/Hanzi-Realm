@@ -66,7 +66,7 @@ export default function BossBattle({ boss, timeLeft, maxTime, isActive, bossHp =
         });
       }
 
-      setAttacks(prev => [...prev, ...newAttacks]);
+      setAttacks(prev => [...prev, ...newAttacks].slice(-20));
 
       const side = Math.random() > 0.5 ? 20 : 80;
       setBossPosition({ x: side, y: 25 + Math.random() * 20 });
@@ -137,24 +137,46 @@ export default function BossBattle({ boss, timeLeft, maxTime, isActive, bossHp =
             </motion.div>
 
             <div className="text-right">
-              <div className="text-4xl font-black text-white">{timeLeft}s</div>
+              <motion.div
+                animate={timeLeft <= 3 ? { scale: [1, 1.15, 1] } : {}}
+                transition={timeLeft <= 3 ? { duration: 0.4, repeat: Infinity } : {}}
+                className={`text-4xl font-black ${
+                  timeLeft <= 5 ? 'text-red-400' : timeLeft <= 15 ? 'text-orange-400' : 'text-white'
+                }`}
+              >
+                {timeLeft}s
+              </motion.div>
               <p className="text-xs text-white/70">Defeat before time runs out!</p>
             </div>
           </div>
 
           <div className="flex gap-3 items-center">
             <div className="flex-1">
-              <p className="text-white/70 text-xs mb-1">HP</p>
+              <p className="text-white/70 text-xs mb-1">HP ({bossHp}/{bossMaxHp})</p>
               <div className="flex gap-1">
-                {Array.from({ length: bossMaxHp }).map((_, i) => (
-                  <motion.div
-                    key={i}
-                    animate={i < bossHp ? { scale: [1, 1.1, 1] } : { scale: 1 }}
-                    transition={{ duration: 0.5, delay: i * 0.1 }}
-                    className={`h-5 flex-1 rounded ${i < bossHp ? '' : 'opacity-30'}`}
-                    style={{ backgroundColor: i < bossHp ? boss.color : '#444' }}
-                  />
-                ))}
+                {Array.from({ length: bossMaxHp }).map((_, i) => {
+                  const isAlive = i < bossHp;
+                  const justLost = i === bossHp;
+                  return (
+                    <div key={i} className="flex-1 relative">
+                      <motion.div
+                        animate={isAlive ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+                        transition={{ duration: 0.8, delay: i * 0.1, repeat: isAlive ? Infinity : 0 }}
+                        className={`h-5 rounded ${isAlive ? '' : 'opacity-20'}`}
+                        style={{ backgroundColor: isAlive ? boss.color : '#444' }}
+                      />
+                      {justLost && (
+                        <motion.div
+                          initial={{ scale: 1, opacity: 1 }}
+                          animate={{ scale: [1, 1.5, 2], opacity: [1, 0.5, 0] }}
+                          transition={{ duration: 0.6 }}
+                          className="absolute inset-0 rounded"
+                          style={{ backgroundColor: boss.color }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
             <div className="flex-1">
@@ -268,6 +290,19 @@ export default function BossBattle({ boss, timeLeft, maxTime, isActive, bossHp =
         }}
         transition={{ duration: 0.1 }}
       />
+
+      {timeLeft <= 10 && (
+        <motion.div
+          className="fixed inset-0 z-19 pointer-events-none"
+          animate={{
+            opacity: timeLeft <= 5 ? [0.3, 0.5, 0.3] : [0.1, 0.2, 0.1],
+          }}
+          transition={{ duration: timeLeft <= 5 ? 0.5 : 1, repeat: Infinity }}
+          style={{
+            background: `radial-gradient(ellipse at center, transparent 40%, ${timeLeft <= 5 ? 'rgba(220,38,38,0.4)' : 'rgba(234,88,12,0.25)'} 100%)`,
+          }}
+        />
+      )}
 
       <AnimatePresence>
         {isAttacking && (

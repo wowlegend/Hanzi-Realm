@@ -88,12 +88,17 @@ export default function LeaderboardModal({ isOpen, onClose }: LeaderboardModalPr
 
             <div className="flex-1 overflow-y-auto space-y-1.5 min-h-[200px]">
               {loading ? (
-                <div className="flex items-center justify-center h-32">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                    className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full"
-                  />
+                <div className="space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 animate-pulse">
+                      <div className="w-6 h-6 rounded-full bg-white/10" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-3 bg-white/10 rounded w-24" />
+                        <div className="h-2 bg-white/5 rounded w-16" />
+                      </div>
+                      <div className="h-4 bg-white/10 rounded w-12" />
+                    </div>
+                  ))}
                 </div>
               ) : entries.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-32 text-white/30">
